@@ -6,11 +6,14 @@
   const canvas = document.getElementById('game');
   const ctx = canvas.getContext('2d');
   const WORLD = { w: 540, h: 960 };
-  const GRAVITY = 2000;
+
+  // Physics — tighter feel
+  const GRAVITY = 2100;      // was 2000
   const MOVE_ACCEL = 2500;
   const MAX_SPEED_X = 360;
-  const JUMP_VY = 820;
+  const JUMP_VY = 880;       // was 820 → ~184px apex with GRAVITY 2100
   const FRICTION_GROUND = 0.85;
+
   const CLIMB_GOLD_PER_PX = 0.5;
   const LANDING_GOLD = 10;
   const LEVEL_BASE_BONUS = 250;
@@ -22,16 +25,20 @@
   const STORE = { pb: (lvl)=> `neonAscent_pb_level_${lvl}`, kid: 'neonAscent_kidMode', theme: 'neonAscent_theme', muted: 'neonAscent_muted', save: 'neonAscent_save', gold: 'neonAscent_gold', inv: 'neonAscent_inventory', skin: 'neonAscent_skin', best: 'neonAscent_bestLevel', lifetime: 'neonAscent_lifetimeGold', daily: 'neonAscent_dailyGift_lastClaim', levelsCompleted: 'neonAscent_levelsCompleted', mostGoldInLevel: 'neonAscent_mostGoldInLevel', deaths: 'neonAscent_deaths', bestNoDeathStreak: 'neonAscent_bestNoDeathStreak', longestComboClimb: 'neonAscent_longestComboClimb' };
 
   const SKINS = [
-    { id:'default', name:'Default Neon',  price:0, rarity:'common', unlockLevel:1, body:'#303136', visor:'#2cf9ff', stripe:'#ff3df2' },
-    { id:'rust',    name:'Rust Ranger',   price:500, rarity:'common', unlockLevel:1, body:'#4a3b31', visor:'#ffe66d', stripe:'#2cf9ff' },
-    { id:'midnight',name:'Midnight Magenta', price:800, rarity:'rare', unlockLevel:3, body:'#262733', visor:'#ff3df2', stripe:'#7af9ff' },
-    { id:'solar',   name:'Solar Flare',   price:1200, rarity:'rare', unlockLevel:5, body:'#3a2a19', visor:'#ffd36d', stripe:'#ff8a0f' },
-    { id:'emerald', name:'Emerald Edge',  price:1800, rarity:'epic', unlockLevel:7, body:'#1d3a2a', visor:'#66ffcc', stripe:'#00ffaa' },
-    { id:'shadow',  name:'Cyber Shadow',  price:2400, rarity:'epic', unlockLevel:9, body:'#161616', visor:'#7af9ff', stripe:'#ffe66d' }
+    { id:'default', name:'Default Neon',  price:0,    rarity:'common', unlockLevel:1, body:'#303136', visor:'#2cf9ff', stripe:'#ff3df2' },
+    { id:'rust',    name:'Rust Ranger',   price:500,  rarity:'common', unlockLevel:1, body:'#4a3b31', visor:'#ffe66d', stripe:'#2cf9ff' },
+    { id:'midnight',name:'Midnight Magenta', price:800, rarity:'rare',   unlockLevel:3, body:'#262733', visor:'#ff3df2', stripe:'#7af9ff' },
+    { id:'solar',   name:'Solar Flare',   price:1200, rarity:'rare',   unlockLevel:5, body:'#3a2a19', visor:'#ffd36d', stripe:'#ff8a0f' },
+    { id:'emerald', name:'Emerald Edge',  price:1800, rarity:'epic',   unlockLevel:7, body:'#1d3a2a', visor:'#66ffcc', stripe:'#00ffaa' },
+    { id:'shadow',  name:'Cyber Shadow',  price:2400, rarity:'epic',   unlockLevel:9, body:'#161616', visor:'#7af9ff', stripe:'#ffe66d' }
   ];
 
-  let level = 1; let rng = mulberry32(Date.now() % 2**31); let kidMode = loadKidMode();
-  let muted; // will set after DOM refs exist
+  // --- Constant, deterministic 100 levels with difficulty scaling ---
+  const LEVELS = buildConstantLevels(100);
+
+  let level = 1;
+  let kidMode = loadKidMode();
+  let muted;
 
   let gold = loadGold(); let lifetimeGold = loadLifetimeGold(); let levelsCompleted = loadLevelsCompleted();
   let mostGoldInOneLevel = loadMostGoldInLevel(); let deaths = loadDeaths(); let bestNoDeathStreak = loadBestNoDeathStreak();
@@ -41,11 +48,17 @@
   let equippedSkinId = loadSkin() || 'default'; let bestLevel = loadBestLevel();
 
   const player = { x: WORLD.w*0.5, y:0, w:44, h:56, vx:0, vy:0, onGround:false, coyoteTime:0, jumpBuffer:0 };
-  const COYOTE_TIME = ()=> kidMode ? 0.12 : 0.08; const JUMP_BUFFER = ()=> kidMode ? 0.18 : 0.12;
+  const COYOTE_TIME = ()=> kidMode ? 0.14 : 0.10;   // was 0.12/0.08
+  const JUMP_BUFFER = ()=> kidMode ? 0.20 : 0.16;   // was 0.18/0.12
 
   let gameState = 'overlay'; let countdown = 0; let camY = 0; let platforms = []; let goalY = 0; let currentLevelHeight = 0;
   const input = { left:false, right:false, jump:false, jumpConsumed:false };
   let levelTime = 0; let totalTime = 0; const levelProgressBestY = {};
+
+  // Booster state
+  let boosters = [];                // pickups in current level
+  let boosterJumps = 0;            // remaining boosted jumps across levels
+  let boosterVyBonus = 0;          // extra vy to apply on boosted jump
 
   // --- DOM refs ---
   const elLevel = document.getElementById('level');
@@ -67,7 +80,17 @@
   const sumStreak = document.getElementById('sum-streak'); const sumBestStreak = document.getElementById('sum-beststreak'); const summaryNext = document.getElementById('summary-next');
   const summaryRetry = document.getElementById('summary-retry'); const summaryClose = document.getElementById('summary-close');
 
-  // Initialize theme, mute state, and apply mute to audio if any
+  // Booster HUD
+  const elHUD = document.getElementById('hud');
+  const elBooster = document.createElement('div');
+  elBooster.id = 'booster-hud';
+  elBooster.style.marginTop = '6px';
+  elBooster.style.fontWeight = '700';
+  elBooster.style.opacity = '0.95';
+  elBooster.textContent = '';
+  if (elHUD) elHUD.appendChild(elBooster);
+
+  // Initialize theme & mute state
   applyTheme(loadTheme());
   muted = loadMuted();
   updateMuteButton();
@@ -119,9 +142,30 @@
     player.jumpBuffer = Math.max(0, player.jumpBuffer - dt);
     if (input.jump) player.jumpBuffer = JUMP_BUFFER();
 
+    // Booster pickup collisions
+    for (const b of boosters){
+      if (b.taken) continue;
+      if (rectsOverlap(player.x, player.y, player.w, player.h, b.x - b.w/2, b.y - b.h/2, b.w, b.h)){
+        b.taken = true;
+        boosterJumps = 2; // next two jumps boosted
+        boosterVyBonus = b.vyBonus; // per-level calibrated
+        flashStatus('Booster acquired! 2 super jumps ready');
+        SFX.booster();
+        updateBoosterHUD();
+      }
+    }
+
+    // Jump resolution with booster support
     if (player.jumpBuffer > 0) {
       if (player.onGround || player.coyoteTime > 0){
-        player.vy = -JUMP_VY; player.onGround = false; player.coyoteTime = 0; player.jumpBuffer = 0; input.jumpConsumed = true; SFX.jump();
+        if (boosterJumps > 0){
+          player.vy = -(JUMP_VY + Math.max(0, boosterVyBonus));
+          boosterJumps--;
+          updateBoosterHUD();
+        } else {
+          player.vy = -JUMP_VY;
+        }
+        player.onGround = false; player.coyoteTime = 0; player.jumpBuffer = 0; input.jumpConsumed = true; SFX.jump();
       }
     }
 
@@ -221,6 +265,10 @@
 
     for (const p of platforms) drawPlatform(ctx, p);
     drawPlayer(ctx, player);
+
+    // Draw boosters
+    for (const b of boosters){ if (b.taken) continue; drawBooster(ctx, b); }
+
     ctx.restore();
   }
 
@@ -234,6 +282,13 @@
       const bx = x + 12 + i*(w-24)/Math.max(1,(Math.floor(w/100)));
       ctx.beginPath(); ctx.arc(bx, y + h - 8, 2, 0, Math.PI*2); ctx.fill();
     }
+  }
+
+  function drawBooster(ctx, b){
+    const x = b.x, y = b.y;
+    // Neon backpack/booster icon (rounded square + chevron)
+    neonFill(ctx, ()=>{ roundRect(ctx, x-10, y-10, 20, 20, 5); ctx.fillStyle = getAccent2Color(); ctx.fill(); }, getAccent2Color(), 16);
+    neonStroke(ctx, ()=>{ ctx.beginPath(); ctx.moveTo(x-6, y+4); ctx.lineTo(x, y-4); ctx.lineTo(x+6, y+4); ctx.strokeStyle = getAccentColor(); ctx.lineWidth=2; ctx.stroke(); }, getAccentColor(), 14);
   }
 
   function currentSkin(){ return SKINS.find(s=>s.id===equippedSkinId) || SKINS[0]; }
@@ -261,10 +316,8 @@
   function getCSS(varName){ return getComputedStyle(document.body).getPropertyValue(varName).trim(); }
   function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
   function lerp(a,b,t){ return a + (b-a)*t; }
-  function randRange(r){ return r[0] + (r[1]-r[0]) * rng(); }
-  function chance(p){ return rng() < p; }
-  function mulberry32(a){ return function(){ let t = a += 0x6D2B79F5; t = Math.imul(t ^ t>>>15, t|1); t ^= t + Math.imul(t ^ t>>>7, t | 61); return ((t ^ t>>>14)>>>0) / 4294967296; } }
   function formatTime(sec){ const s=Math.floor(sec%60); const m=Math.floor(sec/60); const hundredths=Math.floor((sec - Math.floor(sec))*100); const pad=(n,w=2)=> n.toString().padStart(w,'0'); return `${pad(m)}:${pad(s)}.${pad(hundredths)}`; }
+  function rectsOverlap(ax,ay,aw,ah,bx,by,bw,bh){ return ax < bx + bw && ax + aw > bx && ay < by + bh && ay + ah > by; }
 
   function showOverlay(title, sub, showStart=true, showRestart=false){ ovTitle.textContent = title||'Neon Ascent'; ovSub.textContent=sub||''; ovCount.textContent=''; btnStart.style.display = showStart? '':'none'; btnRestart.style.display = showRestart? '':'none'; const save = loadSave(); btnContinue.style.display = save? '' : 'none'; ov.classList.add('show'); }
   function hideOverlay(){ ov.classList.remove('show'); ovCount.textContent=''; }
@@ -323,72 +376,62 @@
   function clearSave(){ try{ localStorage.removeItem(STORE.save); }catch{} }
   function loadSave(){ try{ const s = localStorage.getItem(STORE.save); return s? JSON.parse(s) : null; }catch{ return null; } }
 
-  function todayKey(){ const d = new Date(); const y=d.getFullYear(); const m=String(d.getMonth()+1).padStart(2,'0'); const day=String(d.getDate()).padStart(2,'0'); return `${y}-${m}-${day}`; }
-  function loadDaily(){ try{ return localStorage.getItem(STORE.daily)||''; }catch{ return ''; } }
-  function saveDaily(v){ try{ localStorage.setItem(STORE.daily, v); }catch{} }
-  function canClaimDaily(){ const last = loadDaily(); return last !== todayKey(); }
-  function tryClaimDailyGift(){ if (!canClaimDaily()) return; addGold(DAILY_GIFT_AMOUNT, { levelEarning:false }); saveDaily(todayKey()); flashStatus(`🎁 Daily gift: +${DAILY_GIFT_AMOUNT} gold!`); SFX.coin(); refreshGiftButton(); updateStatsUI(); }
-  function refreshGiftButton(){ const ok = canClaimDaily(); giftBtn.disabled = !ok; giftBtn.title = ok ? `Claim +${DAILY_GIFT_AMOUNT} gold` : 'Come back tomorrow for another gift'; }
-
   function startLevel(lvl, isRestart=false, showOverlayAtStart=false){
-    level = lvl; elLevel.textContent = `Level ${level}`;
-    rng = mulberry32((Date.now() + level*1337) % 2**31);
+    if (lvl > LEVELS.length){
+      // All levels complete
+      level = LEVELS.length; gameState='overlay';
+      btnStart.style.display=''; btnStart.textContent='Restart'; btnContinue.style.display='none'; btnRestart.style.display='none';
+      showOverlay('All 100 levels complete!','Awesome! Tap Restart to play from Level 1.', true, false);
+      btnStart.onclick = ()=>{ clearSave(); level=1; startLevel(1, false, true); };
+      return;
+    }
 
-    // Generate level and a wide start platform at y=40
-    const WORLD_W = WORLD.w;
+    level = lvl; elLevel.textContent = `Level ${level}`;
+
+    const L = LEVELS[level-1];
     platforms = [];
-    const startPlat = { x: WORLD_W*0.5 - 180, y: 40, w: 360, h: 18, type:'static', phase:0 };
+
+    // Start platform
+    const startPlat = { x: L.start.x, y: L.start.y, w: L.start.w, h:16, type:'static', phase:0 };
     platforms.push(startPlat);
 
-    // Place player centered ABOVE the platform so first frame lands cleanly
-    player.x = clamp(startPlat.x + (startPlat.w - player.w)/2, 0, WORLD_W - player.w);
+    // Place player just above the start platform
+    player.x = clamp(startPlat.x + (startPlat.w - player.w)/2, 0, WORLD.w - player.w);
     player.y = startPlat.y - player.h - 1;
     player.vx=0; player.vy=0; player.onGround=false; player.coyoteTime=0; player.jumpBuffer=0;
 
     levelTime = 0; elLevelTime.textContent = formatTime(0);
     goldThisLevel = 0; comboClimbThisAir = 0; bestComboThisLevel = 0;
 
-    const height = clamp(1200 + (level-1)*220, 1200, 3600); currentLevelHeight = height; goalY = -height;
-
-    let gapMin = clamp(90 + (level-1)*6, 90, 160);
-    let gapMax = clamp(130 + (level-1)*10, 140, 220);
-    let widthMin = clamp(120 - (level-1)*5, 70, 120);
-    let widthMax = clamp(200 - (level-1)*6, 90, 200);
-    let moveChance = clamp(0.08 + (level-1)*0.04, 0.08, 0.6);
-    let moveRangeMin = 30, moveRangeMax = 80;
-    if (kidMode){
-      gapMin=Math.max(60, gapMin-25); gapMax=Math.max(90, gapMax-35);
-      widthMin=Math.min(170, widthMin+40); widthMax=Math.min(260, widthMax+40);
-      moveChance=Math.max(0.04, moveChance*0.5); moveRangeMin=18; moveRangeMax=44;
+    // Add level platforms
+    for (const p of L.platforms){
+      if (p.type==='moving') platforms.push({ x:p.x, y:p.y, w:p.w, h:16, type:'moving', range:p.range||40, _origX:p.x, phase:p.phase||0 });
+      else platforms.push({ x:p.x, y:p.y, w:p.w, h:16, type:'static', phase:0 });
     }
 
-    function rr(range){ return range[0] + (range[1]-range[0]) * rng(); }
-    function ch(p){ return rng() < p; }
-
-    let lastY = startPlat.y - rr([40,60]);
-    while (lastY > goalY + 80){
-      const w = rr([widthMin, widthMax]);
-      const x = clamp(rr([24, WORLD_W - 24 - w]), 24, WORLD_W - 24 - w);
-      const gap = rr([gapMin, gapMax]);
-      const y = lastY - gap;
-      if (ch(moveChance)){
-        const range = rr([moveRangeMin, moveRangeMax]);
-        platforms.push({ x, y, w, h:16, type:'moving', vx:0, range, _origX:x, phase: rr([0, Math.PI*2]) });
-      } else {
-        platforms.push({ x, y, w, h:16, type:'static', phase:0 });
-      }
-      lastY = y;
+    // Boosters
+    boosters = [];
+    for (const bp of (L.boosters||[])){
+      boosters.push({ x: bp.x, y: bp.y, w: 20, h: 20, taken:false, vyBonus: L.boostVyBonus });
     }
+
+    currentLevelHeight = L.height;
+    goalY = L.goalY ?? -L.height;
 
     const key = STORE.pb(level); const prev = parseFloat(localStorage.getItem(key));
     elPB.textContent = `PB: ${isFinite(prev) ? formatTime(prev) : '--:--.--'}`;
-    updateGoldUI(); refreshGiftButton();
+    updateGoldUI(); refreshGiftButton(); updateBoosterHUD();
 
-    camY = -WORLD.h*0.1;
+    camY = -WORLD.h*0.1; // slight look-ahead
     levelProgressBestY[level] = player.y;
 
     if (showOverlayAtStart){ gameState='overlay'; btnStart.textContent='Start'; showOverlay(`Level ${level}`, 'Tap Start to play', true, isRestart); }
     else { setRunning(); }
+  }
+
+  function updateBoosterHUD(){
+    if (!elBooster || !elBooster.parentNode) return;
+    elBooster.textContent = boosterJumps>0 ? `🚀 Booster: ${boosterJumps} jump${boosterJumps>1?'s':''} left` : '';
   }
 
   function flashStatus(text){
@@ -485,7 +528,7 @@
   function ensureAudio(){ if (audio) return; try{ const ctx = new (window.AudioContext || window.webkitAudioContext)(); const master = ctx.createGain(); master.gain.value = muted? 0 : 0.6; master.connect(ctx.destination); audio = { ctx, master }; }catch{} }
   function sweep(f1,f2,dur,type,vol){ if (!audio) return; const { ctx, master }=audio; const o=ctx.createOscillator(); const g=ctx.createGain(); o.type=type; o.frequency.setValueAtTime(f1, ctx.currentTime); o.frequency.exponentialRampToValueAtTime(f2, ctx.currentTime+dur); g.gain.value = vol; o.connect(g); g.connect(master); o.start(); g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur); o.stop(ctx.currentTime + dur + 0.02); }
   function tone(freq, time, type, vol, when){ if (!audio) return; const { ctx, master }=audio; const o=ctx.createOscillator(); const g=ctx.createGain(); o.type=type; g.gain.value=vol; o.frequency.setValueAtTime(freq, when); o.connect(g); g.connect(master); o.start(when); g.gain.exponentialRampToValueAtTime(0.001, when + time); o.stop(when + time + 0.02); }
-  const SFX = { jump(){ if (muted || !audio) return; sweep(380, 620, 0.12, 'square', 0.22); }, land(){ if (muted || !audio) return; sweep(160, 90, 0.08, 'sawtooth', 0.15); }, goal(){ if (muted || !audio) return; const t=audio.ctx.currentTime; tone(660, 0.08, 'triangle', 0.22, t); tone(880, 0.10, 'triangle', 0.22, t+0.1); tone(990, 0.12, 'triangle', 0.22, t+0.22); }, coin(){ if (muted || !audio) return; const t=audio.ctx.currentTime; tone(1200, 0.06, 'square', 0.25, t); tone(1600, 0.06, 'square', 0.2, t+0.06); }, equip(){ if (muted || !audio) return; const t=audio.ctx.currentTime; tone(900, 0.08, 'triangle', 0.2, t); } };
+  const SFX = { jump(){ if (muted || !audio) return; sweep(380, 620, 0.12, 'square', 0.22); }, land(){ if (muted || !audio) return; sweep(160, 90, 0.08, 'sawtooth', 0.15); }, goal(){ if (muted || !audio) return; const t=audio.ctx.currentTime; tone(660, 0.08, 'triangle', 0.22, t); tone(880, 0.10, 'triangle', 0.22, t+0.1); tone(990, 0.12, 'triangle', 0.22, t+0.22); }, coin(){ if (muted || !audio) return; const t=audio.ctx.currentTime; tone(1200, 0.06, 'square', 0.25, t); tone(1600, 0.06, 'square', 0.2, t+0.06); }, equip(){ if (muted || !audio) return; const t=audio.ctx.currentTime; tone(900, 0.08, 'triangle', 0.2, t); }, booster(){ if (muted || !audio) return; const t=audio.ctx.currentTime; tone(1000, 0.06, 'square', 0.22, t); tone(1400, 0.06, 'square', 0.22, t+0.06); tone(1800, 0.08, 'square', 0.22, t+0.12); } };
 
   function setupTouchControls(){
     const left = document.getElementById('btn-left'); const right = document.getElementById('btn-right'); const jump = document.getElementById('btn-jump');
@@ -497,4 +540,69 @@
     bind(right, ()=>{ input.right=true; }, ()=>{ input.right=false; });
     bind(jump, ()=>{ input.jump=true; input.jumpConsumed=false; ensureAudio(); }, ()=>{ input.jump=false; });
   }
-})();
+
+  // ---- Level builder (deterministic, no randomness across runs) ----
+  function buildConstantLevels(count){
+    const levels = [];
+    for (let i=1; i<=count; i++){
+      const t = (i-1)/Math.max(1,(count-1)); // 0..1 progression
+      const height = Math.round(1400 + t * 1000); // 1400 → 2400
+      const startW = Math.round(clamp(360 - t*200, 180, 360));
+      const gapMin = Math.round(clamp(100 + t*30, 100, 130));
+      const gapMax = Math.round(clamp(130 + t*30, 140, 160)); // cap to 160 to stay within reach
+      const widthMin = Math.round(clamp(180 - t*60, 110, 180));
+      const widthMax = Math.round(clamp(220 - t*40, 150, 220));
+      const moveChance = clamp(0.08 + t*0.42, 0.08, 0.5);
+      const moveRange = Math.round(clamp(40 + t*50, 40, 90));
+
+      const start = { x: (WORLD.w*0.5 - startW/2), y: 40, w: startW };
+      const platforms = [];
+
+      // Deterministic pseudo-random helper based on level & index
+      const r01 = (seedA, seedB)=>{
+        let x = (seedA*73856093) ^ (seedB*19349663);
+        x = (x ^ (x>>>13)) * 1274126177;
+        x = (x ^ (x>>>16)) >>> 0;
+        return x / 4294967295;
+      };
+
+      let y = start.y;
+      let gapSum = 0, nGaps = 0;
+      let k = 0;
+      while (y > -height + 100){
+        const rrGap = gapMin + (gapMax-gapMin) * r01(i, k*5+1);
+        const w = Math.round(widthMin + (widthMax-widthMin) * r01(i, k*5+2));
+        const x = Math.round(clamp(24 + (WORLD.w - 48 - w) * r01(i, k*5+3), 24, WORLD.w - 24 - w));
+        const moving = (r01(i, k*5+4) < moveChance);
+        y -= rrGap;
+        const type = moving? 'moving' : 'static';
+        if (moving) platforms.push({ x, y, w, type, range: moveRange, phase: Math.PI*2 * r01(i, k*5+5) });
+        else platforms.push({ x, y, w, type });
+        gapSum += rrGap; nGaps++; k++;
+      }
+
+      // Booster placement: pick a static platform around 35% height (fallback to mid)
+      let boosterIndex = Math.floor(platforms.length * 0.35);
+      if (boosterIndex < 0) boosterIndex = 0; if (boosterIndex >= platforms.length) boosterIndex = Math.floor(platforms.length/2);
+      let bp = platforms[boosterIndex];
+      // Ensure static; if moving, scan forward then backward
+      if (bp && bp.type==='moving'){
+        let found = -1;
+        for (let s=boosterIndex; s<platforms.length; s++){ if (platforms[s].type==='static'){ found = s; break; } }
+        if (found<0){ for (let s=boosterIndex; s>=0; s--){ if (platforms[s].type==='static'){ found = s; break; } } }
+        if (found>=0) bp = platforms[found];
+      }
+
+      const avgGap = nGaps? (gapSum / nGaps) : 120;
+      const baseH = (JUMP_VY*JUMP_VY)/(2*GRAVITY);
+      const targetH = baseH + (avgGap * 5); // +5 platforms worth
+      const targetVy = Math.sqrt(Math.max(0.001, 2*GRAVITY*targetH));
+      const boostVyBonus = Math.max(0, targetVy - JUMP_VY);
+
+      const boosters = [];
+      if (bp){ boosters.push({ x: Math.round(bp.x + bp.w/2), y: Math.round(bp.y - 24) }); }
+
+      levels.push({ height, start, platforms, goalY: -height, boosters, boostVyBonus });
+    }
+    return levels;
+  }
