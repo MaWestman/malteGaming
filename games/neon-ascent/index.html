@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Neon Ascent • Maltes gamingsida!</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body class="theme-cyan">
+  <header id="topbar">
+    <a id="back-link" href="../../" aria-label="Back to home">← Back to home</a>
+    <div id="brand" aria-label="Maltes gamingsida!">
+      <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" class="logo-icon">
+        <defs>
+          <linearGradient id="grad" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="var(--accent)"/>
+            <stop offset="100%" stop-color="var(--accent-2)"/>
+          </linearGradient>
+        </defs>
+        <path d="M12 2l2.3 4.7L20 8l-4 3.9.9 5.7L12 15.9 7.1 17.6 8 11.9 4 8l5.7-1.3L12 2z" fill="url(#grad)"/>
+      </svg>
+      <span>Maltes gamingsida!</span>
+    </div>
+    <div id="topbar-actions">
+      <div id="gold-pill" title="Your gold">🪙 <span id="gold-top">0</span></div>
+      <button id="gift-btn" type="button" aria-label="Daily gift">🎁 Daily Gift</button>
+      <button id="stats-btn" type="button" aria-haspopup="dialog" aria-label="Lifetime stats">📊 Stats</button>
+      <label class="theme-picker" for="theme-select">Theme:</label>
+      <select id="theme-select" aria-label="Theme variant">
+        <option value="cyan" selected>Cyan</option>
+        <option value="magenta">Magenta</option>
+        <option value="yellow">Yellow</option>
+      </select>
+      <button id="shop-btn" type="button" aria-haspopup="dialog">Shop 🛒</button>
+      <button id="mute-btn" type="button" aria-pressed="false" aria-label="Toggle sound">🔊</button>
+    </div>
+  </header>
+
+  <canvas id="game" aria-label="Neon Ascent game canvas" role="img"></canvas>
+
+  <div id="controls" aria-hidden="false">
+    <button id="btn-left" class="ctrl" aria-label="Move Left">◀</button>
+    <button id="btn-right" class="ctrl" aria-label="Move Right">▶</button>
+    <button id="btn-jump" class="ctrl accent" aria-label="Jump">⤒</button>
+  </div>
+
+  <div id="hud">
+    <div id="level">Level 1</div>
+    <div id="gold">Gold: <span id="gold-hud">0</span></div>
+    <div id="timers">
+      <span>Level:</span> <span id="level-time">00:00.00</span>
+      &nbsp;·&nbsp;
+      <span>Run:</span> <span id="total-time">00:00.00</span>
+    </div>
+    <div id="pb">PB: --:--.--</div>
+    <button id="kid-toggle" class="btn" type="button" aria-pressed="false">Kid Mode: OFF</button>
+    <div id="status"></div>
+  </div>
+
+  <button id="pause-btn" type="button" aria-haspopup="dialog">Pause ▮▮</button>
+
+  <div id="overlay" role="dialog" aria-modal="true" aria-live="polite">
+    <div class="overlay-card">
+      <div class="overlay-title" id="ov-title">Neon Ascent</div>
+      <div class="overlay-sub" id="ov-sub">Tap Start to play</div>
+      <div class="overlay-count" id="ov-count"></div>
+      <div class="overlay-actions">
+        <button class="btn" id="btn-start" type="button">Start</button>
+        <button class="btn" id="btn-continue" type="button" style="display:none">Continue</button>
+        <button class="btn" id="btn-restart" type="button" style="display:none">Restart Level</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="shop-overlay" role="dialog" aria-modal="true" aria-live="polite">
+    <div class="shop-card">
+      <div class="shop-head">
+        <div class="shop-title">🛒 Shop — Skins</div>
+        <div class="shop-gold">🪙 <span id="gold-shop">0</span></div>
+      </div>
+      <div id="skin-grid" class="skin-grid" aria-label="Skin choices"></div>
+      <div class="shop-actions">
+        <button class="btn" id="shop-close" type="button">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="stats-overlay" role="dialog" aria-modal="true" aria-live="polite">
+    <div class="stats-card">
+      <div class="stats-title">📊 Lifetime Stats</div>
+      <div class="stats-grid">
+        <div class="stat"><div class="stat-label">Highest Level</div><div class="stat-value" id="stat-best">1</div></div>
+        <div class="stat"><div class="stat-label">Total Gold Earned</div><div class="stat-value" id="stat-gold">0</div></div>
+        <div class="stat"><div class="stat-label">Levels Completed</div><div class="stat-value" id="stat-levels">0</div></div>
+        <div class="stat"><div class="stat-label">Most Gold in One Level</div><div class="stat-value" id="stat-most">0</div></div>
+        <div class="stat"><div class="stat-label">Skins Owned</div><div class="stat-value" id="stat-skins">1</div></div>
+        <div class="stat"><div class="stat-label">Current Gold</div><div class="stat-value" id="stat-balance">0</div></div>
+        <div class="stat"><div class="stat-label">Deaths / Falls</div><div class="stat-value" id="stat-deaths">0</div></div>
+        <div class="stat"><div class="stat-label">Best No‑Fall Streak</div><div class="stat-value" id="stat-streak">0</div></div>
+        <div class="stat"><div class="stat-label">Longest Combo Climb</div><div class="stat-value" id="stat-combo">0</div></div>
+      </div>
+      <div class="pb-section">
+        <div class="pb-title">🏁 Best Times per Level</div>
+        <ul id="pb-list" class="pb-list" aria-label="Best times per level"></ul>
+      </div>
+      <div class="stats-actions">
+        <button class="btn" id="stats-close" type="button">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="summary-overlay" role="dialog" aria-modal="true" aria-live="polite">
+    <div class="summary-card">
+      <div class="summary-title" id="sum-title">Level Complete!</div>
+      <div class="summary-sub" id="sum-sub"></div>
+      <div class="summary-grid">
+        <div class="sum"><div class="sum-label">Time</div><div class="sum-value" id="sum-time">00:00.00</div><span class="badge" id="sum-pb" hidden>PB!</span></div>
+        <div class="sum"><div class="sum-label">Gold (this level)</div><div class="sum-value" id="sum-gold">0</div></div>
+        <div class="sum"><div class="sum-label">Time Bonus</div><div class="sum-value" id="sum-timebonus">0</div></div>
+        <div class="sum"><div class="sum-label">Level Bonus</div><div class="sum-value" id="sum-levelbonus">0</div></div>
+        <div class="sum"><div class="sum-label">Best Combo (this level)</div><div class="sum-value" id="sum-combo">0</div></div>
+        <div class="sum"><div class="sum-label">Streak</div><div class="sum-value" id="sum-streak">0</div><div class="sum-mini" id="sum-beststreak">Best: 0</div></div>
+      </div>
+      <div class="summary-actions">
+        <button class="btn" id="summary-next" type="button">Next Level ▶</button>
+        <button class="btn alt" id="summary-retry" type="button">Retry ⟳</button>
+        <button class="btn ghost" id="summary-close" type="button">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script defer src="game.js"></script>
+</body>
+</html>
