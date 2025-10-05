@@ -1,4 +1,5 @@
 (() => {
+  console.log('[Neon Ascent] game.js start');
   // TDZ fix: declare audio before updateMuteButton() can run
   let audio = null;
 
@@ -386,7 +387,7 @@
       return;
     }
 
-    level = lvl; elLevel.textContent = `Level ${level}`;
+    level = lvl; if (elLevel) elLevel.textContent = `Level ${level}`;
 
     const L = LEVELS[level-1];
     platforms = [];
@@ -400,7 +401,7 @@
     player.y = startPlat.y - player.h - 1;
     player.vx=0; player.vy=0; player.onGround=false; player.coyoteTime=0; player.jumpBuffer=0;
 
-    levelTime = 0; elLevelTime.textContent = formatTime(0);
+    levelTime = 0; if (elLevelTime) elLevelTime.textContent = formatTime(0);
     goldThisLevel = 0; comboClimbThisAir = 0; bestComboThisLevel = 0;
 
     // Add level platforms
@@ -416,10 +417,10 @@
     }
 
     currentLevelHeight = L.height;
-    goalY = L.goalY ?? -L.height;
+    goalY = (L.goalY != null ? L.goalY : -L.height);
 
     const key = STORE.pb(level); const prev = parseFloat(localStorage.getItem(key));
-    elPB.textContent = `PB: ${isFinite(prev) ? formatTime(prev) : '--:--.--'}`;
+    if (elPB) elPB.textContent = `PB: ${isFinite(prev) ? formatTime(prev) : '--:--.--'}`;
     updateGoldUI(); refreshGiftButton(); updateBoosterHUD();
 
     camY = -WORLD.h*0.1; // slight look-ahead
@@ -435,6 +436,7 @@
   }
 
   function flashStatus(text){
+    if (!elStatus) return;
     elStatus.textContent=text; elStatus.style.opacity='1'; elStatus.style.transition='none';
     requestAnimationFrame(()=>{ elStatus.style.transition='opacity 1.6s ease 0.6s'; elStatus.style.opacity='0'; });
   }
@@ -606,3 +608,6 @@
     }
     return levels;
   }
+
+  console.log('[Neon Ascent] game.js loaded OK');
+})();
