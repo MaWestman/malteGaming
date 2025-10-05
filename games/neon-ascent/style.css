@@ -1,4 +1,4 @@
-/* ====== Minimal-but-full CSS for the game ====== */
+/* Minimal-but-full CSS for the game */
 :root{ --bg-1:#0d0e10; --bg-2:#131416; --neon:#2cf9ff; --neon-pink:#ff3df2; --neon-yellow:#ffe66d; --text:#e6e6e6; --accent: var(--neon); --accent-2: #7af9ff; }
 body.theme-cyan{ --accent: var(--neon); --accent-2:#7af9ff; }
 body.theme-magenta{ --accent: var(--neon-pink); --accent-2:#ff90fa; }
