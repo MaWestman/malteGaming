@@ -2,10 +2,12 @@
   const list = document.getElementById('football-list');
   const upd  = document.getElementById('fb-updated');
   const err  = document.getElementById('football-error');
+
   fetch('assets/football.json', {cache:'no-store'})
     .then(r => r.ok ? r.json() : Promise.reject(new Error('HTTP '+r.status)))
     .then(data => render(data))
     .catch(e => { console.error(e); err.hidden=false; });
+
   function render(data){
     const items = (data && data.items) || [];
     const updated = data && data.generatedAt;
