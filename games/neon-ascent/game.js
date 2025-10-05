@@ -118,7 +118,7 @@
   muteBtn.addEventListener('click', ()=>{ muted = !muted; saveMuted(muted); updateMuteButton(); });
   shopBtn.addEventListener('click', ()=>{ openShop(); }); shopClose.addEventListener('click', ()=>{ closeShop(); });
   statsBtn.addEventListener('click', ()=>{ openStats(); }); statsClose.addEventListener('click', ()=>{ closeStats(); });
-  giftBtn.addEventListener('click', ()=>{ tryClaimDailyGift(); }); refreshGiftButton();
+  giftBtn && giftBtn.addEventListener('click', ()=>{ tryClaimDailyGift(); }); refreshGiftButton();
   summaryNext.addEventListener('click', ()=>{ closeSummary(); startLevel(level + 1, false, true); });
   summaryRetry.addEventListener('click', ()=>{ closeSummary(); startLevel(level, true, true); });
   summaryClose.addEventListener('click', ()=>{ closeSummary(); startLevel(level + 1, false, true); });
@@ -337,7 +337,7 @@
   }
   function closeSummary(){ summaryOv.classList.remove('show'); }
 
-  function kidEncouragement(){ const msgs=['Nice try! You’ve got this! 💪','So close! One more jump! 🌟','Great effort! Try again! 🚀','You’re getting higher every time! 🔝']; return msgs[Math.floor(Math.random()*msgs.length)]; }
+  function kidEncouragement(){ const msgs=['Nice try! You’ve got this! \uD83D\uDCAA','So close! One more jump! \uD83C\uDF1F','Great effort! Try again! \uD83D\uDE80','You’re getting higher every time! \uD83D\uDD1D']; return msgs[Math.floor(Math.random()*msgs.length)]; }
   function loadKidMode(){ try{ return localStorage.getItem(STORE.kid)==='true'; }catch{ return false; } }
   function saveKidMode(v){ try{ localStorage.setItem(STORE.kid, v?'true':'false'); }catch{} }
   function updateKidToggleUI(){ elKidToggle.setAttribute('aria-pressed', kidMode? 'true':'false'); elKidToggle.classList.toggle('active', kidMode); elKidToggle.textContent = `Kid Mode: ${kidMode? 'ON':'OFF'}`; }
@@ -348,7 +348,7 @@
 
   function saveMuted(v){ try{ localStorage.setItem(STORE.muted, v?'true':'false'); }catch{} }
   function loadMuted(){ try{ return localStorage.getItem(STORE.muted)==='true'; }catch{ return false; } }
-  function updateMuteButton(){ muteBtn.setAttribute('aria-pressed', muted? 'true':'false'); muteBtn.textContent = muted? '🔈' : '🔊'; if (audio && audio.master) audio.master.gain.value = muted? 0 : 0.6; }
+  function updateMuteButton(){ muteBtn.setAttribute('aria-pressed', muted? 'true':'false'); muteBtn.textContent = muted? '\uD83D\uDD08' : '\uD83D\uDD0A'; if (audio && audio.master) audio.master.gain.value = muted? 0 : 0.6; }
 
   function loadGold(){ try{ return parseInt(localStorage.getItem(STORE.gold)||'0',10) || 0; }catch{ return 0; } }
   function saveGold(){ try{ localStorage.setItem(STORE.gold, String(gold)); }catch{} }
@@ -376,6 +376,14 @@
   function saveProgress({level, gold, totalTime}){ try{ localStorage.setItem(STORE.save, JSON.stringify({ level, gold, totalTime })); }catch{} }
   function clearSave(){ try{ localStorage.removeItem(STORE.save); }catch{} }
   function loadSave(){ try{ const s = localStorage.getItem(STORE.save); return s? JSON.parse(s) : null; }catch{ return null; } }
+
+  // --- Daily gift helpers (missing before) ---
+  function todayKey(){ const d = new Date(); const y=d.getFullYear(); const m=String(d.getMonth()+1).padStart(2,'0'); const day=String(d.getDate()).padStart(2,'0'); return `${y}-${m}-${day}`; }
+  function loadDaily(){ try{ return localStorage.getItem(STORE.daily)||''; }catch{ return ''; } }
+  function saveDaily(v){ try{ localStorage.setItem(STORE.daily, v); }catch{} }
+  function canClaimDaily(){ const last = loadDaily(); return last !== todayKey(); }
+  function tryClaimDailyGift(){ if (!canClaimDaily()) return; addGold(DAILY_GIFT_AMOUNT, { levelEarning:false }); saveDaily(todayKey()); flashStatus(`\uD83C\uDF81 Daily gift: +${DAILY_GIFT_AMOUNT} gold!`); SFX.coin(); refreshGiftButton(); updateStatsUI(); }
+  function refreshGiftButton(){ if (!giftBtn) return; const ok = canClaimDaily(); giftBtn.disabled = !ok; giftBtn.title = ok ? `Claim +${DAILY_GIFT_AMOUNT} gold` : 'Come back tomorrow for another gift'; }
 
   function startLevel(lvl, isRestart=false, showOverlayAtStart=false){
     if (lvl > LEVELS.length){
@@ -432,7 +440,7 @@
 
   function updateBoosterHUD(){
     if (!elBooster || !elBooster.parentNode) return;
-    elBooster.textContent = boosterJumps>0 ? `🚀 Booster: ${boosterJumps} jump${boosterJumps>1?'s':''} left` : '';
+    elBooster.textContent = boosterJumps>0 ? `\uD83D\uDE80 Booster: ${boosterJumps} jump${boosterJumps>1?'s':''} left` : '';
   }
 
   function flashStatus(text){
@@ -452,7 +460,7 @@
       const card = document.createElement('div'); card.className='skin-card'; card.dataset.skin=skin.id; card.classList.add(`rarity-${skin.rarity}`);
       const badge = document.createElement('div'); badge.className='skin-badge'; badge.textContent = skin.rarity.toUpperCase();
       const name = document.createElement('div'); name.className='skin-name'; name.textContent = skin.name;
-      const price = document.createElement('div'); price.className='skin-price'; price.textContent = `🪙 ${skin.price}`;
+      const price = document.createElement('div'); price.className='skin-price'; price.textContent = `\uD83E\uDE99 ${skin.price}`;
       const lock = document.createElement('div'); lock.className='skin-lock'; lock.style.display='none';
       const prev = document.createElement('canvas'); prev.className='skin-preview'; prev.width = 260; prev.height = 120;
       const acts = document.createElement('div'); acts.className='skin-actions';
