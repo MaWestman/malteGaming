@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="sv">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Maltes gamingsida!</title>
+  <link rel="stylesheet" href="assets/site.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="brand">
+      <div class="logo">🎮</div>
+      <div class="title">Maltes gamingsida!</div>
+    </div>
+    <nav class="nav">
+      <a href="/">Hem</a>
+      <a href="games/">Spel</a>
+      <a href="#football" onclick="document.getElementById('football').scrollIntoView({behavior:'smooth'});return false;">Fotboll</a>
+      <a href="#about" onclick="document.getElementById('about').scrollIntoView({behavior:'smooth'});return false;">Om</a>
+    </nav>
+  </header>
+
+  <main class="hero">
+    <h1>Välkommen till Maltes gamingsida! 👋</h1>
+    <p>En trygg och lekfull plats för spel och fotboll. Börja med vårt nya klättrarspel:</p>
+    <p>
+      <a class="cta" href="games/neon-ascent/">🚀 Spela <strong>Neon Ascent</strong></a>
+    </p>
+  </main>
+
+  <section id="games" class="section">
+    <h2>Spel</h2>
+    <ul class="card-list">
+      <li class="card">
+        <h3>Neon Ascent</h3>
+        <p>Hoppa uppåt, samla guld, och lås upp skins. Daglig present, PB-tider, och statistik ingår.</p>
+        <p><a class="btn" href="games/neon-ascent/">Spela nu</a></p>
+      </li>
+    </ul>
+  </section>
+
+  <section id="football" class="section">
+    <h2>Fotboll</h2>
+    <p>Här kan vi lägga in en nyhetsfeed från en betrodd källa. För att undvika CORS‑problem på GitHub Pages kan vi antingen:</p>
+    <ol>
+      <li>Använda en provider som erbjuder öppet JSON/RSS med CORS (t.ex. public API med JSONP/CORS), eller</li>
+      <li>Lägga till en liten serverless‑funktion (t.ex. Azure Functions) som proxyar flödet.</li>
+    </ol>
+    <p>Vill du att jag kopplar en riktig feed härnäst?</p>
+    <div class="placeholder-feed">
+      <div class="item">
+        <div class="when">Idag</div>
+        <div class="what">⚽ Exempel: IF Elfsborg vann hemma!</div>
+      </div>
+      <div class="item">
+        <div class="when">Igår</div>
+        <div class="what">🏟️ Exempel: Matchtrupp presenterad inför derbyt.</div>
+      </div>
+    </div>
+  </section>
+
+  <section id="about" class="section">
+    <h2>Om sidan</h2>
+    <p>Byggd för barnvänlig underhållning med tydliga knappar, stora texter och inget
+    krångel. Allt funkar på mobil, surfplatta och dator.</p>
+  </section>
+
+  <footer class="site-footer">
+    <div>© <span id="y"></span> Maltes gamingsida!</div>
+  </footer>
+  <script>
+    document.getElementById('y').textContent = new Date().getFullYear();
+  </script>
+</body>
+</html>
