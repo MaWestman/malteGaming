@@ -86,8 +86,8 @@
   elKidToggle.addEventListener('click', ()=>{ kidMode=!kidMode; saveKidMode(kidMode); updateKidToggleUI(); flashStatus(kidMode? 'Kid Mode ON: friendlier jumps':'Kid Mode OFF'); startLevel(level, true, true); });
   updateKidToggleUI();
   elPause.addEventListener('click', ()=>{ if (gameState==='running') pauseGame(); else if (gameState==='paused') resumeWithCountdown(2); });
-  btnStart.addEventListener('click', ()=>{ if (gameState==='overlay' or gameState==='paused') { clearSave(); streakNoDeath = 0; startCountdown(3); ensureAudio(); } });
-  btnContinue.addEventListener('click', ()=>{ const save = loadSave(); if (save){ if (typeof save.score === 'number' and typeof save.gold !== 'number'){ save.gold = save.score; delete save.score; } gold = typeof save.gold === 'number' ? save.gold : gold; totalTime = save.totalTime||0; updateGoldUI(); startLevel(save.level||1, false, false); startCountdown(2); ensureAudio(); } });
+  btnStart.addEventListener('click', ()=>{ if (gameState==='overlay' || gameState==='paused') { clearSave(); streakNoDeath = 0; startCountdown(3); ensureAudio(); } });
+  btnContinue.addEventListener('click', ()=>{ const save = loadSave(); if (save){ if (typeof save.score === 'number' && typeof save.gold !== 'number'){ save.gold = save.score; delete save.score; } gold = typeof save.gold === 'number' ? save.gold : gold; totalTime = save.totalTime||0; updateGoldUI(); startLevel(save.level||1, false, false); startCountdown(2); ensureAudio(); } });
   btnRestart.addEventListener('click', ()=>{ startLevel(level, true, true); });
   themeSelect.addEventListener('change', ()=>{ applyTheme(themeSelect.value); saveTheme(themeSelect.value); });
   themeSelect.value = loadTheme();
@@ -112,7 +112,7 @@
 
     const accel = (input.left? -1:0) + (input.right? 1:0);
     player.vx += accel * MOVE_ACCEL * dt;
-    if (accel === 0 and player.onGround) player.vx *= FRICTION_GROUND;
+    if (accel === 0 && player.onGround) player.vx *= FRICTION_GROUND;
     player.vx = clamp(player.vx, -MAX_SPEED_X, MAX_SPEED_X);
 
     player.coyoteTime = Math.max(0, player.coyoteTime - dt);
@@ -132,9 +132,9 @@
     let groundedThisFrame = false;
     if (player.vy >= 0){
       for (const p of platforms){
-        if (player.y + player.h <= p.y and nextY + player.h >= p.y){
+        if (player.y + player.h <= p.y && nextY + player.h >= p.y){
           const px1 = p.x, px2 = p.x + p.w; const plx1 = nextX, plx2 = nextX + player.w;
-          if (plx2 > px1 and plx1 < px2){ nextY = p.y - player.h; player.vy = 0; groundedThisFrame = true; }
+          if (plx2 > px1 && plx1 < px2){ nextY = p.y - player.h; player.vy = 0; groundedThisFrame = true; }
         }
       }
     }
@@ -146,7 +146,7 @@
     const wasGrounded = player.onGround; player.onGround = groundedThisFrame;
     if (player.onGround) player.coyoteTime = COYOTE_TIME();
 
-    if (!wasGrounded and player.onGround){
+    if (!wasGrounded && player.onGround){
       if (comboClimbThisAir > longestComboClimb){ longestComboClimb = comboClimbThisAir; saveLongestComboClimb(longestComboClimb); }
       if (comboClimbThisAir > bestComboThisLevel){ bestComboThisLevel = comboClimbThisAir; }
       comboClimbThisAir = 0; addGold(LANDING_GOLD); SFX.land();
@@ -340,18 +340,15 @@
     const startPlat = { x: WORLD_W*0.5 - 180, y: 40, w: 360, h: 18, type:'static', phase:0 };
     platforms.push(startPlat);
 
-    // Place player centered ABOVE the start platform so first frame lands cleanly
-    player.w = player.w; // no-op clarity
-    player.h = player.h; // no-op clarity
+    // Place player centered ABOVE the platform so first frame lands cleanly
     player.x = clamp(startPlat.x + (startPlat.w - player.w)/2, 0, WORLD_W - player.w);
-    player.y = startPlat.y - player.h - 1;   // <-- key fix so we don't start intersecting
+    player.y = startPlat.y - player.h - 1;
     player.vx=0; player.vy=0; player.onGround=false; player.coyoteTime=0; player.jumpBuffer=0;
 
     levelTime = 0; elLevelTime.textContent = formatTime(0);
     goldThisLevel = 0; comboClimbThisAir = 0; bestComboThisLevel = 0;
 
-    const height = clamp(1200 + (level-1)*220, 1200, 3600);
-    currentLevelHeight = height; goalY = -height;
+    const height = clamp(1200 + (level-1)*220, 1200, 3600); currentLevelHeight = height; goalY = -height;
 
     let gapMin = clamp(90 + (level-1)*6, 90, 160);
     let gapMax = clamp(130 + (level-1)*10, 140, 220);
@@ -365,11 +362,9 @@
       moveChance=Math.max(0.04, moveChance*0.5); moveRangeMin=18; moveRangeMax=44;
     }
 
-    // Helper RNG shortcuts
     function rr(range){ return range[0] + (range[1]-range[0]) * rng(); }
     function ch(p){ return rng() < p; }
 
-    // Build ascending platforms up to goalY
     let lastY = startPlat.y - rr([40,60]);
     while (lastY > goalY + 80){
       const w = rr([widthMin, widthMax]);
@@ -385,13 +380,11 @@
       lastY = y;
     }
 
-    // PB label and UI
     const key = STORE.pb(level); const prev = parseFloat(localStorage.getItem(key));
     elPB.textContent = `PB: ${isFinite(prev) ? formatTime(prev) : '--:--.--'}`;
     updateGoldUI(); refreshGiftButton();
 
-    // Camera and progress baseline
-    camY = -WORLD.h*0.1; // slight look-ahead
+    camY = -WORLD.h*0.1;
     levelProgressBestY[level] = player.y;
 
     if (showOverlayAtStart){ gameState='overlay'; btnStart.textContent='Start'; showOverlay(`Level ${level}`, 'Tap Start to play', true, isRestart); }
@@ -464,7 +457,7 @@
     neonFill(c2, ()=>{ roundRect(c2, px+8, py+10, w-16, 16, 8); c2.fillStyle=skin.visor; c2.fill(); }, skin.visor, 10);
     neonFill(c2, ()=>{ roundRect(c2, px + w*0.15, py + h - 12, w*0.7, 6, 3); c2.fillStyle=skin.stripe; c2.fill(); }, skin.stripe, 8);
   }
-  function startPreviewAnim(){ function step(t){ if (!shopOv.classList.contains('show')) return; document.querySelectorAll('.skin-preview').forEach((cnv)=>{ const sid = cnv.dataset.skin; const skin = SKINS.find(s=>s.id===sid) or SKINS[0]; drawSkinPreview(cnv, skin, t); }); requestAnimationFrame(step); } requestAnimationFrame(step); }
+  function startPreviewAnim(){ function step(t){ if (!shopOv.classList.contains('show')) return; document.querySelectorAll('.skin-preview').forEach((cnv)=>{ const sid = cnv.dataset.skin; const skin = SKINS.find(s=>s.id===sid) || SKINS[0]; drawSkinPreview(cnv, skin, t); }); requestAnimationFrame(step); } requestAnimationFrame(step); }
 
   function openStats(){ updateStatsUI(); statsOv.classList.add('show'); }
   function closeStats(){ statsOv.classList.remove('show'); }
