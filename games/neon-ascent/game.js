@@ -1,13 +1,15 @@
 /* Neon Ascent — game.js
- * Version: v7.2 (Modals)
+ * Version: v7.3c (No Kid Mode, Modals UI, Slower Early Economy, Harder Levels)
  * - Hub (between levels) is a centered modal window
  * - Shop is a centered modal window with tabs
  * - Legendary skins (expanded) with neon blink
  * - Theme locks with 🔒 + tooltip, rarity accents
- * - Kid Mode helpers restored
+ * - Kid Mode fully removed
+ * - Economy rebalanced for slower early game (ramps to late)
+ * - Level gen harder & more dynamic (more/faster moving platforms)
  * ----------------------------------------------------- */
 (() => {
-  console.log('[Neon Ascent] game.js start v7.2');
+  console.log('[Neon Ascent] game.js start v7.3c');
 
   // TDZ fix: declare audio before updateMuteButton() can run
   let audio = null;
@@ -24,18 +26,42 @@
   const JUMP_VY = 880;
   const FRICTION_GROUND = 0.85;
 
-  // ---- ECONOMY TUNING
-  const CLIMB_GOLD_PER_PX = 0.2;
-  const LANDING_GOLD = 4;
-  const LEVEL_BASE_BONUS = 100;
-  const LEVEL_PER_LEVEL_BONUS = 20;
+  // Par time scale (height / PAR_SPEED)
   const PAR_SPEED = 120;
-  const TIME_BONUS_RATE = 10;
+
+  // Daily gift (static; can be made dynamic later)
   const DAILY_GIFT_AMOUNT = 150;
+
+  // ---------- Economy v7.3b — slower early, smooth ramp after L15 → L100 ----------
+  const ECON_BASE = {
+    perPx: 0.04,       // base gold per pixel (reduced)
+    landing: 1,        // base per landing
+    levelBase: 16,     // base completion bonus
+    levelPerLevel: 2.8,// completion bonus growth per level (pre-ramp)
+    timeRate: 1.6      // base time bonus rate
+  };
+  // Returns tuned values for the current level
+  function econForLevel(lvl){
+    const L = Math.max(1, Math.min(100, lvl));
+    // Ramp begins at L15 (very modest before that), reaches 1 at L100
+    const t = Math.max(0, L - 15) / 85;
+    const s = t*t*(3 - 2*t); // smoothstep
+
+    // 0.55× at early levels → ~4.55× by L100
+    const mult = 0.55 + s * 4.0;
+
+    return {
+      perPx: ECON_BASE.perPx * mult,
+      landing: Math.max(1, Math.round(ECON_BASE.landing * mult)),
+      levelBase: Math.round(ECON_BASE.levelBase * mult),
+      // completion bonus grows slightly faster late-game
+      levelPerLevel: Math.round(ECON_BASE.levelPerLevel * (0.5 + s*1.7)),  // 0.5×→2.2×
+      timeRate: Math.max(1, Math.round(ECON_BASE.timeRate * (0.7 + s*2.4))) // 0.7×→3.1×
+    };
+  }
 
   const STORE = {
     pb: (lvl)=> `neonAscent_pb_level_${lvl}`,
-    kid: 'neonAscent_kidMode',
     theme: 'neonAscent_theme',
     muted: 'neonAscent_muted',
     save: 'neonAscent_save',
@@ -63,33 +89,38 @@
     { id:'violet',   name:'Violet',   unlock:9,  accent:'#b48bff', accent2:'#8ac6ff' }
   ];
 
-  // Skins (with many Legendary variants)
+  // Skins (repriced for new economy)
   const SKINS = [
     { id:'default',  name:'Default Neon',     price:0,     rarity:'common',    unlockLevel:1,  body:'#303136', visor:'#2cf9ff', stripe:'#ff3df2' },
-    { id:'rust',     name:'Rust Ranger',      price:1500,  rarity:'common',    unlockLevel:1,  body:'#4a3b31', visor:'#ffe66d', stripe:'#2cf9ff' },
-    { id:'midnight', name:'Midnight Magenta', price:3000,  rarity:'rare',      unlockLevel:3,  body:'#262733', visor:'#ff3df2', stripe:'#7af9ff' },
-    { id:'solar',    name:'Solar Flare',      price:4500,  rarity:'rare',      unlockLevel:5,  body:'#3a2a19', visor:'#ffd36d', stripe:'#ff8a0f' },
-    { id:'emerald',  name:'Emerald Edge',     price:6500,  rarity:'epic',      unlockLevel:7,  body:'#1d3a2a', visor:'#66ffcc', stripe:'#00ffaa' },
-    { id:'shadow',   name:'Cyber Shadow',     price:9000,  rarity:'epic',      unlockLevel:9,  body:'#161616', visor:'#7af9ff', stripe:'#ffe66d' },
 
-    // Legendary pack (new + existing)
-    { id:'aurora',    name:'Aurora Pulse',     price:15000, rarity:'legendary', unlockLevel:11, body:'#0f1022', visor:'#b48bff', stripe:'#8af5ff' },
-    { id:'prism',     name:'Prism Phantom',    price:18000, rarity:'legendary', unlockLevel:13, body:'#101018', visor:'#ffe66d', stripe:'#7af9ff' },
-    { id:'nova',      name:'Neon Nova',        price:22000, rarity:'legendary', unlockLevel:15, body:'#121212', visor:'#ff3df2', stripe:'#2cf9ff' },
-    { id:'quantum',   name:'Quantum Specter',  price:24000, rarity:'legendary', unlockLevel:17, body:'#0b0c0f', visor:'#8cfffb', stripe:'#ff7ae6' },
-    { id:'eclipse',   name:'Eclipse Driver',   price:26000, rarity:'legendary', unlockLevel:19, body:'#0d0e14', visor:'#7af9ff', stripe:'#ffd36d' },
-    { id:'hyper',     name:'Hyperdrive Ion',   price:28000, rarity:'legendary', unlockLevel:21, body:'#0f1118', visor:'#2cf9ff', stripe:'#ff8a0f' },
-    { id:'spectrum',  name:'Spectrum Surge',   price:30000, rarity:'legendary', unlockLevel:23, body:'#0e0e0f', visor:'#ff7ae6', stripe:'#8ac6ff' },
-    { id:'starlight', name:'Starlight Halo',   price:32000, rarity:'legendary', unlockLevel:25, body:'#0e0f13', visor:'#ffe66d', stripe:'#2cf9ff' },
-    { id:'cascade',   name:'Cascade Reactor',  price:34000, rarity:'legendary', unlockLevel:28, body:'#0a0b0e', visor:'#66ffcc', stripe:'#b48bff' },
-    { id:'thunder',   name:'Thunder Vortex',   price:36000, rarity:'legendary', unlockLevel:32, body:'#0b0c10', visor:'#7af9ff', stripe:'#ff3df2' }
+    // Common
+    { id:'rust',     name:'Rust Ranger',      price:2000,  rarity:'common',    unlockLevel:1,  body:'#4a3b31', visor:'#ffe66d', stripe:'#2cf9ff' },
+
+    // Rare
+    { id:'midnight', name:'Midnight Magenta', price:5000,  rarity:'rare',      unlockLevel:3,  body:'#262733', visor:'#ff3df2', stripe:'#7af9ff' },
+    { id:'solar',    name:'Solar Flare',      price:9000,  rarity:'rare',      unlockLevel:5,  body:'#3a2a19', visor:'#ffd36d', stripe:'#ff8a0f' },
+
+    // Epic
+    { id:'emerald',  name:'Emerald Edge',     price:14000, rarity:'epic',      unlockLevel:7,  body:'#1d3a2a', visor:'#66ffcc', stripe:'#00ffaa' },
+    { id:'shadow',   name:'Cyber Shadow',     price:20000, rarity:'epic',      unlockLevel:9,  body:'#161616', visor:'#7af9ff', stripe:'#ffe66d' },
+
+    // Legendary (late‑game sinks)
+    { id:'aurora',   name:'Aurora Pulse',     price:30000, rarity:'legendary', unlockLevel:11, body:'#0f1022', visor:'#b48bff', stripe:'#8af5ff' },
+    { id:'prism',    name:'Prism Phantom',    price:38000, rarity:'legendary', unlockLevel:13, body:'#101018', visor:'#ffe66d', stripe:'#7af9ff' },
+    { id:'nova',     name:'Neon Nova',        price:48000, rarity:'legendary', unlockLevel:15, body:'#121212', visor:'#ff3df2', stripe:'#2cf9ff' },
+    { id:'quantum',  name:'Quantum Specter',  price:56000, rarity:'legendary', unlockLevel:17, body:'#0b0c0f', visor:'#8cfffb', stripe:'#ff7ae6' },
+    { id:'eclipse',  name:'Eclipse Driver',   price:62000, rarity:'legendary', unlockLevel:19, body:'#0d0e14', visor:'#7af9ff', stripe:'#ffd36d' },
+    { id:'hyper',    name:'Hyperdrive Ion',   price:70000, rarity:'legendary', unlockLevel:21, body:'#0f1118', visor:'#2cf9ff', stripe:'#ff8a0f' },
+    { id:'spectrum', name:'Spectrum Surge',   price:76000, rarity:'legendary', unlockLevel:23, body:'#0e0e0f', visor:'#ff7ae6', stripe:'#8ac6ff' },
+    { id:'starlight',name:'Starlight Halo',   price:82000, rarity:'legendary', unlockLevel:25, body:'#0e0f13', visor:'#ffe66d', stripe:'#2cf9ff' },
+    { id:'cascade',  name:'Cascade Reactor',  price:90000, rarity:'legendary', unlockLevel:28, body:'#0a0b0e', visor:'#66ffcc', stripe:'#b48bff' },
+    { id:'thunder',  name:'Thunder Vortex',   price:98000, rarity:'legendary', unlockLevel:32, body:'#0b0c10', visor:'#7af9ff', stripe:'#ff3df2' }
   ];
 
-  // --- Constant, deterministic 100 levels with difficulty scaling ---
+  // --- Harder, deterministic 100 levels with difficulty scaling ---
   const LEVELS = buildConstantLevels(100);
 
   let level = 1;
-  let kidMode = loadKidMode();
   let muted;
 
   let gold = loadGold();
@@ -112,8 +143,10 @@
   let bestLevel = loadBestLevel();
 
   const player = { x: WORLD.w*0.5, y:0, w:44, h:56, vx:0, vy:0, onGround:false, coyoteTime:0, jumpBuffer:0 };
-  const COYOTE_TIME = ()=> kidMode ? 0.14 : 0.10;
-  const JUMP_BUFFER = ()=> kidMode ? 0.20 : 0.16;
+
+  // Fixed (Kid Mode removed) — adjust if you want easier/harder timing
+  const COYOTE_TIME = ()=> 0.09;  // was conditional
+  const JUMP_BUFFER = ()=> 0.14;  // was conditional
 
   let gameState = 'overlay';
   let countdown = 0;
@@ -142,7 +175,6 @@
   const elPB = document.getElementById('pb');
 
   const elStatus = document.getElementById('status');
-  const elKidToggle = document.getElementById('kid-toggle');
   const elPause = document.getElementById('pause-btn');
 
   const themeSelect = document.getElementById('theme-select');
@@ -197,11 +229,11 @@
   elBooster.textContent = '';
   if (elHUD) elHUD.appendChild(elBooster);
 
-  // Inject shared CSS (shop + cards + rarity + themes)
+  // Inject shared CSS (shop + cards + rarity + themes) & modal CSS
   injectSharedStyles();
-  injectModalStyles(); // v7.2 modal CSS
+  injectModalStyles();
 
-  // ---------- Modal helpers (v7.2) ----------
+  // ---------- Modal helpers ----------
   function ensureModal(id, titleText) {
     let backdrop = document.getElementById(id);
     if (!backdrop) {
@@ -279,16 +311,6 @@
 
   // Touch controls (guard if buttons aren’t present)
   setupTouchControls();
-
-  // Kid Mode toggle
-  if (elKidToggle){
-    elKidToggle.addEventListener('click', ()=>{
-      kidMode=!kidMode; saveKidMode(kidMode); updateKidToggleUI();
-      flashStatus(kidMode? 'Kid Mode ON: friendlier jumps':'Kid Mode OFF');
-      openHubFor(level);
-    });
-    updateKidToggleUI();
-  }
 
   // Pause button
   if (elPause){
@@ -425,13 +447,14 @@
     if (!wasGrounded && player.onGround){
       if (comboClimbThisAir > longestComboClimb){ longestComboClimb = comboClimbThisAir; saveLongestComboClimb(longestComboClimb); }
       if (comboClimbThisAir > bestComboThisLevel){ bestComboThisLevel = comboClimbThisAir; }
-      comboClimbThisAir = 0; addGold(LANDING_GOLD); SFX.land();
+      const econLand = econForLevel(level);
+      comboClimbThisAir = 0; addGold(econLand.landing); SFX.land();
     }
 
-    // Animate moving platforms
+    // Animate moving platforms (v7.3c: speed per platform)
     for (const p of platforms){
       if (p.type==='moving'){
-        p.phase += dt;
+        p.phase += dt * (p.spd || 1.0); // speed set in level builder (1.25–2.4 rad/s)
         const offset = Math.sin(p.phase) * (p.range || 0);
         p.x = p._origX + offset;
         if (p.x < 0) p.x = 0;
@@ -451,7 +474,8 @@
     const bestY = levelProgressBestY[level] ?? player.y;
     if (player.y < bestY){
       const delta = bestY - player.y;
-      const climbGold = Math.floor(delta * CLIMB_GOLD_PER_PX);
+      const econClimb = econForLevel(level);
+      const climbGold = Math.floor(delta * econClimb.perPx);
       if (climbGold>0){
         addGold(climbGold);
         levelProgressBestY[level] = player.y;
@@ -465,9 +489,10 @@
       if (comboClimbThisAir > bestComboThisLevel){ bestComboThisLevel = comboClimbThisAir; }
       comboClimbThisAir = 0;
 
+      const econ = econForLevel(level);
       const parSeconds = Math.max(1, currentLevelHeight / PAR_SPEED);
-      const timeBonus = Math.max(0, Math.floor((parSeconds - levelTime) * TIME_BONUS_RATE));
-      const levelBonus = LEVEL_BASE_BONUS + LEVEL_PER_LEVEL_BONUS * level;
+      const timeBonus = Math.max(0, Math.floor((parSeconds - levelTime) * econ.timeRate));
+      const levelBonus = econ.levelBase + econ.levelPerLevel * level;
       const gained = timeBonus + levelBonus; addGold(gained);
       totalTime += levelTime;
 
@@ -499,7 +524,7 @@
     const fallLimit = camY + WORLD.h + 240;
     if (player.y > fallLimit){
       deaths++; saveDeaths(deaths); streakNoDeath = 0;
-      flashStatus(kidMode? `${kidEncouragement()} Restarting…`:'Fell! Restarting level…');
+      flashStatus('Fell! Restarting level…');
       comboClimbThisAir = 0; bestComboThisLevel = 0;
       startLevel(level, true, true);
       return;
@@ -611,7 +636,7 @@
     ctx.restore();
   }
 
-  // ---------- Hub as modal (v7.2) ----------
+  // ---------- Hub as modal ----------
   function openHubFor(targetLevel){
     level = Math.max(1, Math.min(targetLevel, LEVELS.length));
 
@@ -641,7 +666,8 @@
       if (t.id===cur) opt.selected=true; sel.appendChild(opt);
     });
     sel.addEventListener('change', ()=>{
-      const id = sel.value; const t = getThemeById(id);
+      const id = sel.value; const t = THEMES.find(x=>x.id===id);
+      if (!t) return;
       if (bestLevel < (t.unlock||1)){
         flashStatus(`🔒 Theme locked — reach Level ${t.unlock}`);
         sel.value = loadTheme();
@@ -685,7 +711,7 @@
     openModal('modal-hub');
   }
 
-  // ----- SHOP as modal (v7.2) -----
+  // ----- SHOP as modal -----
   function openShopModal(){
     const shop = ensureModal('modal-shop', 'Shop');
     const body = shop.querySelector('.na-modal-body');
@@ -855,7 +881,7 @@
   function startCountdown(seconds=3){
     countdown = seconds;
     gameState='countdown';
-    // Close modals when starting countdown (v7.2)
+    // Close modals when starting countdown
     closeModal('modal-hub'); 
     closeModal('modal-shop');
 
@@ -924,8 +950,8 @@
 
     // Add level platforms
     for (const p of L.platforms){
-      if (p.type==='moving') platforms.push({ x:p.x, y:p.y, w:p.w, h:16, type:'moving', range:p.range||40, _origX:p.x, phase:p.phase||0 });
-      else platforms.push({ x:p.x, y:p.y, w:p.w, h:16, type:'static', phase:0 });
+      if (p.type==='moving') platforms.push({ x:p.x, y:p.y, w:p.w, h:p.h||16, type:'moving', range:p.range||60, _origX:p._origX ?? p.x, phase:p.phase||0, spd:p.spd||1.0 });
+      else platforms.push({ x:p.x, y:p.y, w:p.w, h:p.h||16, type:'static', phase:0 });
     }
 
     // Boosters
@@ -1013,7 +1039,7 @@
   function injectModalStyles(){
     if (document.getElementById('na-modal-styles')) return;
     const st = document.createElement('style'); st.id='na-modal-styles'; st.textContent = `
-      /* --- Modals (Hub + Shop) v7.2 --- */
+      /* --- Modals (Hub + Shop) --- */
       .na-modal-backdrop {
         position: fixed; inset: 0;
         background: rgba(0,0,0,.55);
@@ -1093,9 +1119,6 @@
     document.body.classList.add(`theme-${t}`);
     if (themeSelect) themeSelect.value = t;
   }
-  function getThemeById(id){ return THEMES.find(t=>t.id===id); }
-  function isThemeUnlocked(id){ const t = getThemeById(id); return t? (bestLevel >= (t.unlock||1)) : true; }
-
   function saveTheme(name){ try{ localStorage.setItem(STORE.theme, name); }catch{} }
   function loadTheme(){ try{ return localStorage.getItem(STORE.theme) || 'cyan'; }catch{ return 'cyan'; } }
 
@@ -1142,7 +1165,7 @@
   function clearSave(){ try{ localStorage.removeItem(STORE.save); }catch{} }
   function loadSave(){ try{ const s = localStorage.getItem(STORE.save); return s? JSON.parse(s) : null; }catch{ return null; } }
 
-  // --- Daily gift ---
+  // --- Daily gift helpers ---
   function todayKey(){ const d = new Date(); const y=d.getFullYear(); const m=String(d.getMonth()+1).padStart(2,'0'); const day=String(d.getDate()).padStart(2,'0'); return `${y}-${m}-${day}`; }
   function loadDaily(){ try{ return localStorage.getItem(STORE.daily)||''; }catch{ return ''; } }
   function saveDaily(v){ try{ localStorage.setItem(STORE.daily, v); }catch{} }
@@ -1156,42 +1179,30 @@
   }
   function refreshGiftButton(){ if (!giftBtn) return; const ok = canClaimDaily(); giftBtn.disabled = !ok; giftBtn.title = ok ? `Claim +${DAILY_GIFT_AMOUNT} gold` : 'Come back tomorrow for another gift'; }
 
-  // ---- Kid Mode helpers ----
-  function loadKidMode(){ try{ return localStorage.getItem(STORE.kid)==='true'; }catch{ return false; } }
-  function saveKidMode(v){ try{ localStorage.setItem(STORE.kid, v?'true':'false'); }catch{} }
-  function kidEncouragement(){
-    const msgs=[
-      'Nice try! You’ve got this! 💪',
-      'So close! One more jump! 🌟',
-      'Great effort! Try again! 🚀',
-      'You’re getting higher every time! 🔝'
-    ];
-    return msgs[Math.floor(Math.random()*msgs.length)];
-  }
-  function updateKidToggleUI(){
-    if (!elKidToggle) return;
-    elKidToggle.setAttribute('aria-pressed', kidMode? 'true':'false');
-    elKidToggle.classList.toggle('active', kidMode);
-    elKidToggle.textContent = `Kid Mode: ${kidMode? 'ON':'OFF'}`;
-  }
-
   function updateBoosterHUD(){ if (!elBooster || !elBooster.parentNode) return; elBooster.textContent = boosterJumps>0 ? `\uD83D\uDE80 Booster: ${boosterJumps} jump${boosterJumps>1?'s':''} left` : ''; }
   function flashStatus(text){ if (!elStatus) return; elStatus.textContent=text; elStatus.style.opacity='1'; elStatus.style.transition='none'; requestAnimationFrame(()=>{ elStatus.style.transition='opacity 1.6s ease 0.6s'; elStatus.style.opacity='0'; }); }
   function addGold(amt, opts){ if (amt<=0) return; gold += amt; lifetimeGold += amt; if (!opts || opts.levelEarning !== false) { goldThisLevel += amt; } updateGoldUI(); saveGold(); saveLifetimeGold(); }
 
-  // ---- Level builder ----
+  // ---- Level builder (harder, more moving) ----
   function buildConstantLevels(count){
     const levels = [];
     for (let i=1; i<=count; i++){
       const t = (i-1)/Math.max(1,(count-1)); // 0..1 progression
-      const height = Math.round(1400 + t * 1000); // 1400 → 2400
-      const startW = Math.round(clamp(360 - t*200, 180, 360));
-      const gapMin = Math.round(clamp(100 + t*30, 100, 130));
-      const gapMax = Math.round(clamp(130 + t*30, 140, 160)); // cap to 160 to stay within reach
-      const widthMin = Math.round(clamp(180 - t*60, 110, 180));
-      const widthMax = Math.round(clamp(220 - t*40, 150, 220));
-      const moveChance = clamp(0.08 + t*0.42, 0.08, 0.5);
-      const moveRange = Math.round(clamp(40 + t*50, 40, 90));
+      // Slightly taller later levels
+      const height = Math.round(1450 + t * 1100); // 1450 → 2550
+
+      // Harder: narrower start + play platforms, slightly larger gaps
+      const startW  = Math.round(clamp(340 - t*240, 160, 340));       // was 360 - t*200 (min 180)
+      const gapMin  = Math.round(clamp(115 + t*35, 115, 185));        // was 100..130
+      const gapMax  = Math.round(clamp(145 + t*35, 150, 200));        // was 130..160
+      const widthMin= Math.round(clamp(170 - t*80,  90, 170));        // was min 110
+      const widthMax= Math.round(clamp(210 - t*60, 120, 210));        // was min 150
+
+      // More moving platforms + bigger ranges + speed scaling
+      const moveChance = clamp(0.14 + t*0.58, 0.14, 0.72);            // was 0.08 + t*0.42 (cap 0.5)
+      const moveRange  = Math.round(clamp(55 + t*65, 55, 120));       // was 40..90
+      // Per-platform speed between ~1.25 and ~2.4 rad/s (used in update loop)
+      const speedMin = 1.25, speedMax = 2.4;
 
       const start = { x: (WORLD.w*0.5 - startW/2), y: 40, w: startW };
       const platforms = [];
@@ -1214,27 +1225,34 @@
         const moving = (r01(i, k*5+4) < moveChance);
         y -= rrGap;
         const type = moving? 'moving' : 'static';
-        if (moving) platforms.push({ x, y, w, type, range: moveRange, phase: Math.PI*2 * r01(i, k*5+5) });
-        else platforms.push({ x, y, w, type });
+
+        if (moving){
+          const phase = Math.PI*2 * r01(i, k*5+5);
+          const spd   = speedMin + (speedMax - speedMin) * r01(i, k*5+6); // per-platform speed
+          platforms.push({ x, y, w, h:16, type, range: moveRange, _origX:x, phase, spd });
+        } else {
+          platforms.push({ x, y, w, h:16, type, phase:0 });
+        }
+
         gapSum += rrGap; nGaps++; k++;
       }
 
-      // Booster placement: pick a static platform around 35% height (fallback to mid)
+      // Booster placement: pick a static platform near 35% height; fallback if needed
       let boosterIndex = Math.floor(platforms.length * 0.35);
       if (boosterIndex < 0) boosterIndex = 0;
       if (boosterIndex >= platforms.length) boosterIndex = Math.floor(platforms.length/2);
       let bp = platforms[boosterIndex];
-      // Ensure static; if moving, scan forward then backward
       if (bp && bp.type==='moving'){
         let found = -1;
         for (let s=boosterIndex; s<platforms.length; s++){ if (platforms[s].type==='static'){ found = s; break; } }
-        if (found<0){ for (let s=boosterIndex; s>=0; s--){ if (platforms[s].type==='static'){ found = s; break; } } }
+        if (found<0){ for (let s=boosterIndex; s>=0; s--){ if (platforms[s].type==='static'){ found = s; break; } }
+        }
         if (found>=0) bp = platforms[found];
       }
 
       const avgGap = nGaps? (gapSum / nGaps) : 120;
-      const baseH = (JUMP_VY*JUMP_VY)/(2*GRAVITY);
-      const targetH = baseH + (avgGap * 5); // +5 platforms worth
+      const baseH = (JUMP_VY*JUMP_VY)/(2*GRAVITY); // ~184px default
+      const targetH = baseH + (avgGap * 5); // target reach with booster
       const targetVy = Math.sqrt(Math.max(0.001, 2*GRAVITY*targetH));
       const boostVyBonus = Math.max(0, targetVy - JUMP_VY);
 
@@ -1247,5 +1265,5 @@
   }
 
   // ---------- end of IIFE ----------
-  console.log('[Neon Ascent] game.js v7.2 loaded OK');
+  console.log('[Neon Ascent] game.js v7.3c loaded OK');
 })();
