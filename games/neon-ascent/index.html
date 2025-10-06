@@ -59,17 +59,18 @@
 
   <button id="pause-btn" type="button" aria-haspopup="dialog">Pause ▮▮</button>
 
-
-<div id="overlay">
-  <div class="overlay-title" id="ov-title"></div>
-  <div class="overlay-sub" id="ov-sub"></div>
-  <div class="overlay-count" id="ov-count"></div>
-  <div class="overlay-actions">
-    <button id="btn-start">Start</button>
-    <button id="btn-restart">Restart</button>
-    <button id="btn-continue">Continue</button>
+  <div id="overlay" role="dialog" aria-modal="true" aria-live="polite">
+    <div class="overlay-card">
+      <div class="overlay-title" id="ov-title">Neon Ascent</div>
+      <div class="overlay-sub" id="ov-sub">Tap Start to play</div>
+      <div class="overlay-count" id="ov-count"></div>
+      <div class="overlay-actions">
+        <button class="btn" id="btn-start" type="button">Start</button>
+        <button class="btn" id="btn-continue" type="button" style="display:none">Continue</button>
+        <button class="btn" id="btn-restart" type="button" style="display:none">Restart Level</button>
+      </div>
+    </div>
   </div>
-</div>
 
   <div id="shop-overlay" role="dialog" aria-modal="true" aria-live="polite">
     <div class="shop-card">
