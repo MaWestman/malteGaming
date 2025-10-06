@@ -37,7 +37,7 @@
     { id:'violet',   name:'Violet',   unlock:9,  accent:'#b48bff', accent2:'#8ac6ff' }
   ];
 
-  // Skins (added Legendary)
+  // Skins (with many Legendary variants)
   const SKINS = [
     { id:'default',  name:'Default Neon',     price:0,     rarity:'common',    unlockLevel:1,  body:'#303136', visor:'#2cf9ff', stripe:'#ff3df2' },
     { id:'rust',     name:'Rust Ranger',      price:1500,  rarity:'common',    unlockLevel:1,  body:'#4a3b31', visor:'#ffe66d', stripe:'#2cf9ff' },
@@ -45,10 +45,17 @@
     { id:'solar',    name:'Solar Flare',      price:4500,  rarity:'rare',      unlockLevel:5,  body:'#3a2a19', visor:'#ffd36d', stripe:'#ff8a0f' },
     { id:'emerald',  name:'Emerald Edge',     price:6500,  rarity:'epic',      unlockLevel:7,  body:'#1d3a2a', visor:'#66ffcc', stripe:'#00ffaa' },
     { id:'shadow',   name:'Cyber Shadow',     price:9000,  rarity:'epic',      unlockLevel:9,  body:'#161616', visor:'#7af9ff', stripe:'#ffe66d' },
-    // Legendary additions
-    { id:'aurora',   name:'Aurora Pulse',     price:15000, rarity:'legendary', unlockLevel:11, body:'#0f1022', visor:'#2cf9ff', stripe:'#ff3df2' },
+    // Legendary pack (new + existing)
+    { id:'aurora',   name:'Aurora Pulse',     price:15000, rarity:'legendary', unlockLevel:11, body:'#0f1022', visor:'#b48bff', stripe:'#8af5ff' },
     { id:'prism',    name:'Prism Phantom',    price:18000, rarity:'legendary', unlockLevel:13, body:'#101018', visor:'#ffe66d', stripe:'#7af9ff' },
-    { id:'nova',     name:'Neon Nova',        price:22000, rarity:'legendary', unlockLevel:15, body:'#121212', visor:'#ff3df2', stripe:'#2cf9ff' }
+    { id:'nova',     name:'Neon Nova',        price:22000, rarity:'legendary', unlockLevel:15, body:'#121212', visor:'#ff3df2', stripe:'#2cf9ff' },
+    { id:'quantum',  name:'Quantum Specter',  price:24000, rarity:'legendary', unlockLevel:17, body:'#0b0c0f', visor:'#8cfffb', stripe:'#ff7ae6' },
+    { id:'eclipse',  name:'Eclipse Driver',   price:26000, rarity:'legendary', unlockLevel:19, body:'#0d0e14', visor:'#7af9ff', stripe:'#ffd36d' },
+    { id:'hyper',    name:'Hyperdrive Ion',   price:28000, rarity:'legendary', unlockLevel:21, body:'#0f1118', visor:'#2cf9ff', stripe:'#ff8a0f' },
+    { id:'spectrum', name:'Spectrum Surge',   price:30000, rarity:'legendary', unlockLevel:23, body:'#0e0e0f', visor:'#ff7ae6', stripe:'#8ac6ff' },
+    { id:'starlight',name:'Starlight Halo',   price:32000, rarity:'legendary', unlockLevel:25, body:'#0e0f13', visor:'#ffe66d', stripe:'#2cf9ff' },
+    { id:'cascade',  name:'Cascade Reactor',  price:34000, rarity:'legendary', unlockLevel:28, body:'#0a0b0e', visor:'#66ffcc', stripe:'#b48bff' },
+    { id:'thunder',  name:'Thunder Vortex',   price:36000, rarity:'legendary', unlockLevel:32, body:'#0b0c10', visor:'#7af9ff', stripe:'#ff3df2' }
   ];
 
   // --- Constant, deterministic 100 levels with difficulty scaling ---
@@ -134,7 +141,16 @@
       hubThemeSelect = document.createElement('select'); hubThemeSelect.className='na-select'; hubThemeSelect.style.minWidth='160px';
       wrap.appendChild(lbl); wrap.appendChild(hubThemeSelect); bar.appendChild(wrap);
       hubThemeSelect.addEventListener('change', ()=>{
-        const id = hubThemeSelect.value; if (isThemeUnlocked(id)){ applyTheme(id); saveTheme(id); lastThemeId=id; flashStatus(`Theme: ${getThemeById(id).name}`);} else { hubThemeSelect.value = lastThemeId || loadTheme(); flashStatus('Theme locked — reach required level to unlock'); }
+        const id = hubThemeSelect.value; const t = getThemeById(id);
+        if (!isThemeUnlocked(id)){
+          flashStatus(`\uD83D\uDD12 Theme locked – reach Level ${t.unlock} to unlock`);
+          // revert to previous
+          hubThemeSelect.value = lastThemeId || loadTheme();
+          return;
+        }
+        lastThemeId = id;
+        applyTheme(id); saveTheme(id);
+        flashStatus(`Theme: ${t.name}`);
       });
     }
 
@@ -146,7 +162,7 @@
       const header = document.createElement('div'); header.className='na-shop-header';
       const left = document.createElement('div'); left.style.display='flex'; left.style.alignItems='center'; left.style.gap='12px';
       const title = document.createElement('div'); title.className='na-shop-title'; title.textContent='Shop'; left.appendChild(title);
-      const goldBadge = document.createElement('div'); goldBadge.className='na-shop-gold'; goldBadge.textContent = `🪙 ${gold}`; left.appendChild(goldBadge);
+      const goldBadge = document.createElement('div'); goldBadge.className='na-shop-gold'; goldBadge.textContent = `\uD83E\uDE99 ${gold}`; left.appendChild(goldBadge);
       const close = document.createElement('button'); close.className='na-shop-close'; close.setAttribute('aria-label','Close'); close.textContent='×'; close.addEventListener('click', ()=>{ hubShopOpen=false; hubShopPanel.style.display='none'; });
       header.appendChild(left); header.appendChild(close); hubShopPanel.appendChild(header);
 
@@ -169,7 +185,7 @@
       const opt = document.createElement('option');
       const locked = bl < (t.unlock||1);
       opt.value=t.id;
-      opt.textContent = locked ? `🔒 ${t.name} (L${t.unlock})` : t.name;
+      opt.textContent = locked ? `\uD83D\uDD12 ${t.name} (L${t.unlock})` : t.name;
       opt.title = locked ? `Reach Level ${t.unlock} to unlock` : `Theme: ${t.name}`;
       if (t.id===cur) opt.selected = true;
       hubThemeSelect.appendChild(opt);
@@ -197,8 +213,11 @@
   window.addEventListener('keyup', (e)=>{ const k = keymap[e.code]; if (!k) return; e.preventDefault(); input[k] = false; }, {passive:false});
 
   setupTouchControls();
+
+  // ---- Kid Mode handlers ----
   elKidToggle.addEventListener('click', ()=>{ kidMode=!kidMode; saveKidMode(kidMode); updateKidToggleUI(); flashStatus(kidMode? 'Kid Mode ON: friendlier jumps':'Kid Mode OFF'); openHubFor(level); });
   updateKidToggleUI();
+
   elPause.addEventListener('click', ()=>{ if (gameState==='running') pauseGame(); else if (gameState==='paused') resumeWithCountdown(2); });
 
   // Keep original controls, but hub flow will use custom Start button.
@@ -466,7 +485,7 @@
       prev.style.width='100%'; prev.style.display='block'; prev.style.margin='8px 0';
 
       const meta = document.createElement('div'); meta.className='na-card-meta';
-      const price = document.createElement('div'); price.className='skin-price'; price.textContent = `🪙 ${skin.price}`;
+      const price = document.createElement('div'); price.className='skin-price'; price.textContent = `\uD83E\uDE99 ${skin.price}`;
       const lock = document.createElement('div'); lock.className='skin-lock'; lock.style.display='none';
       meta.appendChild(price); meta.appendChild(lock);
       const acts = document.createElement('div'); acts.className='na-actions';
@@ -504,7 +523,7 @@
     updateShopGoldBadges();
   }
 
-  function updateShopGoldBadges(){ document.querySelectorAll('.na-shop .na-shop-gold').forEach(el=>{ el.textContent = `🪙 ${gold}`; }); }
+  function updateShopGoldBadges(){ document.querySelectorAll('.na-shop .na-shop-gold').forEach(el=>{ el.textContent = `\uD83E\uDE99 ${gold}`; }); }
 
   // Overlay shop: shared CSS frame + tabs
   function openShop(){ if (!shopOv) return; ensureOverlayShopChrome(); renderShopGrid(shopOv.querySelector('.na-shop-grid'), { filter: overlayFilter, scope:'overlay' }); updateGoldUI(); shopOv.classList.add('show'); startPreviewAnim(); updateShopGoldBadges(); }
@@ -518,7 +537,7 @@
       const header = document.createElement('div'); header.className='na-shop-header';
       const left = document.createElement('div'); left.style.display='flex'; left.style.alignItems='center'; left.style.gap='12px';
       const title = document.createElement('div'); title.className='na-shop-title'; title.textContent='Shop'; left.appendChild(title);
-      const goldBadge = document.createElement('div'); goldBadge.className='na-shop-gold'; goldBadge.textContent = `🪙 ${gold}`; left.appendChild(goldBadge);
+      const goldBadge = document.createElement('div'); goldBadge.className='na-shop-gold'; goldBadge.textContent = `\uD83E\uDE99 ${gold}`; left.appendChild(goldBadge);
       header.appendChild(left);
       frame.appendChild(header);
 
@@ -766,6 +785,12 @@
   function canClaimDaily(){ const last = loadDaily(); return last !== todayKey(); }
   function tryClaimDailyGift(){ if (!canClaimDaily()) return; addGold(DAILY_GIFT_AMOUNT, { levelEarning:false }); saveDaily(todayKey()); flashStatus(`\uD83C\uDF81 Daily gift: +${DAILY_GIFT_AMOUNT} gold!`); SFX.coin(); refreshGiftButton(); updateStatsUI(); }
   function refreshGiftButton(){ if (!giftBtn) return; const ok = canClaimDaily(); giftBtn.disabled = !ok; giftBtn.title = ok ? `Claim +${DAILY_GIFT_AMOUNT} gold` : 'Come back tomorrow for another gift'; }
+
+  // ---- Kid Mode helpers ----
+  function loadKidMode(){ try{ return localStorage.getItem(STORE.kid)==='true'; }catch{ return false; } }
+  function saveKidMode(v){ try{ localStorage.setItem(STORE.kid, v?'true':'false'); }catch{} }
+  function kidEncouragement(){ const msgs=['Nice try! You’ve got this! \uD83D\uDCAA','So close! One more jump! \uD83C\uDF1F','Great effort! Try again! \uD83D\uDE80','You’re getting higher every time! \uD83D\uDD1D']; return msgs[Math.floor(Math.random()*msgs.length)]; }
+  function updateKidToggleUI(){ if (!elKidToggle) return; elKidToggle.setAttribute('aria-pressed', kidMode? 'true':'false'); elKidToggle.classList.toggle('active', kidMode); elKidToggle.textContent = `Kid Mode: ${kidMode? 'ON':'OFF'}`; }
 
   function startLevel(lvl, isRestart=false, showOverlayAtStart=false){
     if (lvl > LEVELS.length){
