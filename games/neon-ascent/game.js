@@ -13,7 +13,25 @@
   let audio = null;
 
   const DPR = Math.max(1, Math.min(3, window.devicePixelRatio || 1));
-  const canvas = document.getElementById('game');
+  
+let canvas = document.getElementById('game');
+if (!canvas) {
+  const c = document.createElement('canvas');
+  c.id = 'game';
+  c.style.display = 'block';
+  c.style.width = '100vw';
+  c.style.height = '100vh';
+  if (document.body) {
+    document.body.appendChild(c);
+  } else {
+    document.addEventListener('DOMContentLoaded', () => {
+      document.body.appendChild(c);
+      try { resize && resize(); } catch (e) {}
+    }, { once: true });
+  }
+  canvas = c;
+  console.info('[Neon Ascent] Auto-created <canvas id="game">');
+}
   const ctx = canvas.getContext('2d');
   const WORLD = { w: 540, h: 960 };
 
@@ -32,23 +50,23 @@
 
   // ---------- Economy v7.3b — slower early, smooth ramp after L15 → L100 ----------
   const ECON_BASE = {
-    perPx: 0.04,       // base gold per pixel (reduced)
+    perPx: 0.03,       // base gold per pixel (reduced)
     landing: 1,        // base per landing
     levelBase: 16,     // base completion bonus
     levelPerLevel: 2.8,// completion bonus growth per level (pre-ramp)
-    timeRate: 1.6      // base time bonus rate
+    timeRate: 1.4      // base time bonus rate
   };
   function econForLevel(lvl){
     const L = Math.max(1, Math.min(100, lvl));
     const t = Math.max(0, L - 15) / 85;              // ramp starts L15
     const s = t*t*(3 - 2*t);                         // smoothstep 0..1
-    const mult = 0.55 + s * 4.0;                     // 0.55× → 4.55×
+    const mult = 0.45 + s * 2.5; // gentler ramp (nerfed from 0.55 + s*4.0)                     // 0.55× → 4.55×
     return {
       perPx: ECON_BASE.perPx * mult,
-      landing: Math.max(1, Math.round(ECON_BASE.landing * mult)),
+      landing: Math.max(1, Math.round(ECON_BASE.landing * (0.6 + s*1.4))),
       levelBase: Math.round(ECON_BASE.levelBase * mult),
-      levelPerLevel: Math.round(ECON_BASE.levelPerLevel * (0.5 + s*1.7)),
-      timeRate: Math.max(1, Math.round(ECON_BASE.timeRate * (0.7 + s*2.4)))
+      levelPerLevel: Math.round(ECON_BASE.levelPerLevel * (0.4 + s*1.0)),
+      timeRate: Math.max(1, Math.round(ECON_BASE.timeRate * (0.6 + s*1.6)))
     };
   }
 
@@ -138,6 +156,8 @@
   let goldThisLevel = 0;
   let comboClimbThisAir = 0;
   let bestComboThisLevel = 0;
+// Tracks the last completed run so we can roll it back if player chooses Replay
+let lastRun = null;
 
   let inventory = loadInventory(); if (!inventory.includes('default')) inventory.push('default');
   let themeInventory = loadThemeInventory(); if (!themeInventory.includes('cyan')) themeInventory.push('cyan'); // ensure starter theme
@@ -212,7 +232,27 @@
   const summaryClose = document.getElementById('summary-close');
 
   // Booster HUD
-  const elHUD = document.getElementById('hud');
+  
+let elHUD = document.getElementById('hud');
+if (!elHUD) {
+  const h = document.createElement('div');
+  h.id = 'hud';
+  // Minimal overlay defaults
+  h.style.position = 'fixed';
+  h.style.left = '10px';
+  h.style.top = '10px';
+  h.style.zIndex = '1000';
+  h.style.pointerEvents = 'none';
+  if (document.body) {
+    document.body.appendChild(h);
+  } else {
+    document.addEventListener('DOMContentLoaded', () => {
+      document.body.appendChild(h);
+    }, { once: true });
+  }
+  elHUD = h;
+  console.info('[Neon Ascent] Auto-created #hud container');
+}
   const elBooster = document.createElement('div');
   elBooster.id = 'booster-hud';
   elBooster.style.marginTop = '6px';
@@ -265,7 +305,10 @@
 
   // Continue
   if (btnContinue){ btnContinue.addEventListener('click', ()=>{ const save = loadSave(); if (save){ if (typeof save.score === 'number' && typeof save.gold !== 'number'){ save.gold = save.score; delete save.score; } gold = typeof save.gold === 'number' ? save.gold : gold; totalTime = save.totalTime||0; updateGoldUI(); openHubFor(save.level||1); ensureAudio(); } }); }
-  if (btnRestart) btnRestart.addEventListener('click', ()=>{ startLevel(level, true, true); });
+  if (btnRestart) btnRestart.addEventListener('click', () => {
+  revertLastRun();
+  startLevel(level, true, true);
+});
 
   // Topbar theme select (guard with ownership + unlock)
   if (themeSelect){
@@ -292,7 +335,13 @@
 
   // Summary actions
   if (summaryNext) summaryNext.addEventListener('click', ()=>{ closeSummary(); openHubFor(level + 1); });
-  if (summaryRetry) summaryRetry.addEventListener('click', ()=>{ closeSummary(); startLevel(level, true, true); });
+  if (summaryRetry) summaryRetry.addEventListener('click', () => {
+  // Replay: revert last run rewards and restart same level
+  revertLastRun();
+  closeSummary();
+  startLevel(level, true, false); // fast restart (no overlay)
+  ensureAudio();
+});
   if (summaryClose) summaryClose.addEventListener('click', ()=>{ closeSummary(); openHubFor(level + 1); });
 
   // Start in Hub
@@ -696,7 +745,27 @@
   function flashStatus(text){ if (!elStatus) return; elStatus.textContent=text; elStatus.style.opacity='1'; elStatus.style.transition='none'; requestAnimationFrame(()=>{ elStatus.style.transition='opacity 1.6s ease 0.6s'; elStatus.style.opacity='0'; }); }
   function addGold(amt, opts){ if (amt<=0) return; gold += amt; lifetimeGold += amt; if (!opts || opts.levelEarning !== false) { goldThisLevel += amt; } updateGoldUI(); saveGold(); saveLifetimeGold(); }
 
-  // ---- Level builder (harder, more moving) ----
+  
+// --- Replay support: revert the last finished run's rewards and pointer ---
+function revertLastRun() {
+  if (!lastRun || lastRun.level !== level) return;
+  const refund = Math.max(0, lastRun.goldEarned || 0);
+  // Roll back currency
+  gold = Math.max(0, gold - refund);
+  lifetimeGold = Math.max(0, lifetimeGold - refund);
+  saveGold();
+  saveLifetimeGold();
+  updateGoldUI();
+
+  // Roll back time
+  totalTime = Math.max(0, totalTime - (lastRun.time || 0));
+
+  // Re-point progression back to THIS level (so Continue won't skip ahead)
+  saveProgress({ level, gold, totalTime });
+
+  lastRun = null; // consume snapshot
+}
+// ---- Level builder (harder, more moving) ----
   function buildConstantLevels(count){ const levels = []; for (let i=1; i<=count; i++){ const t = (i-1)/Math.max(1,(count-1)); const height = Math.round(1450 + t * 1100); const startW  = Math.round(clamp(340 - t*240, 160, 340)); const gapMin  = Math.round(clamp(115 + t*35, 115, 185)); const gapMax  = Math.round(clamp(145 + t*35, 150, 200)); const widthMin= Math.round(clamp(170 - t*80,  90, 170)); const widthMax= Math.round(clamp(210 - t*60, 120, 210)); const moveChance = clamp(0.14 + t*0.58, 0.14, 0.72); const moveRange  = Math.round(clamp(55 + t*65, 55, 120)); const speedMin = 1.25, speedMax = 2.4; const start = { x: (WORLD.w*0.5 - startW/2), y: 40, w: startW }; const platforms = []; const r01 = (seedA, seedB)=>{ let x = (seedA*73856093) ^ (seedB*19349663); x = (x ^ (x>>>13)) * 1274126177; x = (x ^ (x>>>16)) >>> 0; return x / 4294967295; }; let y = start.y; let gapSum = 0, nGaps = 0; let k = 0; while (y > -height + 100){ const rrGap = gapMin + (gapMax-gapMin) * r01(i, k*5+1); const w = Math.round(widthMin + (widthMax-widthMin) * r01(i, k*5+2)); const x = Math.round(clamp(24 + (WORLD.w - 48 - w) * r01(i, k*5+3), 24, WORLD.w - 24 - w)); const moving = (r01(i, k*5+4) < moveChance); y -= rrGap; const type = moving? 'moving' : 'static'; if (moving){ const phase = Math.PI*2 * r01(i, k*5+5); const spd   = speedMin + (speedMax - speedMin) * r01(i, k*5+6); platforms.push({ x, y, w, h:16, type, range: moveRange, _origX:x, phase, spd }); } else { platforms.push({ x, y, w, h:16, type, phase:0 }); } gapSum += rrGap; nGaps++; k++; }
     let boosterIndex = Math.floor(platforms.length * 0.35); if (boosterIndex < 0) boosterIndex = 0; if (boosterIndex >= platforms.length) boosterIndex = Math.floor(platforms.length/2); let bp = platforms[boosterIndex]; if (bp && bp.type==='moving'){ let found = -1; for (let s=boosterIndex; s<platforms.length; s++){ if (platforms[s].type==='static'){ found = s; break; } } if (found<0){ for (let s=boosterIndex; s>=0; s--){ if (platforms[s].type==='static'){ found = s; break; } } } if (found>=0) bp = platforms[found]; }
     const avgGap = nGaps? (gapSum / nGaps) : 120; const baseH = (JUMP_VY*JUMP_VY)/(2*GRAVITY); const targetH = baseH + (avgGap * 5); const targetVy = Math.sqrt(Math.max(0.001, 2*GRAVITY*targetH)); const boostVyBonus = Math.max(0, targetVy - JUMP_VY); const boosters = []; if (bp){ boosters.push({ x: Math.round(bp.x + bp.w/2), y: Math.round(bp.y - 24) }); }
