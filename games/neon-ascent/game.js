@@ -522,8 +522,27 @@
   function updateStatsUI(){ if (statBest) statBest.textContent = String(bestLevel); if (statGold) statGold.textContent = String(lifetimeGold); if (statLevels) statLevels.textContent = String(levelsCompleted); if (statMost) statMost.textContent = String(mostGoldInOneLevel); if (statSkins) statSkins.textContent = String((inventory||[]).length); if (statBal) statBal.textContent = String(gold); if (statDeaths) statDeaths.textContent = String(deaths); if (statStreak) statStreak.textContent = String(bestNoDeathStreak); if (statCombo) statCombo.textContent = String(longestComboClimb); if (pbList){ pbList.innerHTML = ''; for (let i=1; i<=bestLevel; i++){ const key = STORE.pb(i); const v = parseFloat(localStorage.getItem(key)); const li = document.createElement('li'); const lvl = document.createElement('span'); lvl.className='lvl'; lvl.textContent = `L${i}`; const tm = document.createElement('span'); tm.className='time'; tm.textContent = isFinite(v) ? formatTime(v) : '—'; li.appendChild(lvl); li.appendChild(tm); pbList.appendChild(li); } } }
 
   // ----- Countdown & overlay -----
-  function showOverlay(title, sub, showStart=true, showRestart=false){ if (!ov) return; ovTitle && (ovTitle.textContent = title||'Neon Ascent'); ovSub && (ovSub.textContent=sub||''); ovCount && (ovCount.textContent=''); if (btnStart) btnStart.style.display = showStart? '':'none'; if (btnRestart) btnRestart.style.display = showRestart? '':'none'; if (btnContinue){ const save = loadSave(); btnContinue.style.display = save? '' : 'none'; } ov.classList.add('show'); }
-  function hideOverlay(){ if (ov) { ov.classList.remove('show'); if (ovCount) ovCount.textContent=''; } }
+  
+function showOverlay(title, sub, showStart = true, showRestart = false) {
+  if (!ov) return;
+  ovTitle && (ovTitle.textContent = title ?? 'Neon Ascent');
+  ovSub && (ovSub.textContent = sub ?? '');
+  ovCount && (ovCount.textContent = '');
+  btnStart && (btnStart.style.display = showStart ? '' : 'none');
+  btnRestart && (btnRestart.style.display = showRestart ? '' : 'none');
+  btnContinue && (btnContinue.style.display = loadSave() ? '' : 'none');
+  ov.classList.add('show');
+  // No backdrop, so shop/topbar remain interactive!
+}
+
+  
+function hideOverlay() {
+  if (ov) {
+    ov.classList.remove('show');
+    if (ovCount) ovCount.textContent = '';
+  }
+}
+
   function startCountdown(seconds=3){ countdown = seconds; gameState='countdown'; closeModal('modal-hub'); closeModal('modal-shop'); if (btnStart) btnStart.style.display='none'; if (btnRestart) btnRestart.style.display='none'; if (btnContinue) btnContinue.style.display='none'; updateOverlayCountdown(); }
   function updateOverlayCountdown(){ const t=Math.ceil(Math.max(0, countdown)); if (!ovCount || !ovSub) return; if (t>0){ ovCount.textContent=String(t); ovSub.textContent='Get ready…'; } else { ovCount.textContent='GO!'; ovSub.textContent=''; } }
   function setRunning(){ gameState='running'; hideOverlay(); }
