@@ -7,7 +7,7 @@
  * - Skins shop unchanged; economy & level difficulty from v7.3c retained
  * ----------------------------------------------------- */
 (() => {
-  console.log('[Neon Ascent] game.js start v7.4'); console.log('[Neon Ascent] BUILD NA-2025-10-07g (shape skins + fx)');
+  console.log('[Neon Ascent] game.js start v7.4'); console.log('[Neon Ascent] BUILD NA-2025-10-07h (full consolidated)');
 
   // TDZ fix: declare audio before updateMuteButton() can run
   let audio = null;
@@ -53,6 +53,11 @@
   }
 
   const STORE = {
+ bg: 'neonAscent_background',
+ bgInv: 'neonAscent_backgroundInventory',
+ bgOffers: 'neonAscent_bgOffers',
+ bgOfferExp: 'neonAscent_bgOfferExp',
+ bgThumb: 'neonAscent_bgThumb_v1_',
     pb: (lvl)=> `neonAscent_pb_level_${lvl}`,
     theme: 'neonAscent_theme',
     themeInv: 'neonAscent_themeInventory', // NEW: owned themes
@@ -100,6 +105,19 @@
     { id:'nebulon',   name:'Nebulon',     unlock:45, rarity:'legendary', price:70000, accent:'#7af9ff', accent2:'#b48bff' }
   ];
 
+ // --- Backgrounds (coin-purchasable)
+ const BACKGROUNDS = [
+   { id:'sky_day',    name:'Sky — Day',     price:1500 },
+   { id:'sky_night',  name:'Sky — Night',   price:1800 },
+   { id:'retro_grid', name:'Retro Grid',    price:2200 },
+   { id:'forest',     name:'Forest',        price:2000 },
+   { id:'space',      name:'Space Nebula',  price:2600 },
+   { id:'underwater', name:'Underwater',    price:2100 },
+   { id:'lava',       name:'Lava Cave',     price:2400 },
+   { id:'stadium',    name:'Stadium Grass', price:1900 },
+ ];
+
+
   // Skins (repriced for new economy) — unchanged
   const SKINS = [
     { id:'default',  name:'Default Neon',     price:0,     rarity:'common',    unlockLevel:1,  body:'#303136', visor:'#2cf9ff', stripe:'#ff3df2' },
@@ -118,14 +136,7 @@
     { id:'starlight',name:'Starlight Halo',   price:82000, rarity:'legendary', unlockLevel:25, body:'#0e0f13', visor:'#ffe66d', stripe:'#2cf9ff' },
     { id:'cascade',  name:'Cascade Reactor',  price:90000, rarity:'legendary', unlockLevel:28, body:'#0a0b0e', visor:'#66ffcc', stripe:'#b48bff' },
     { id:'thunder',  name:'Thunder Vortex',   price:98000, rarity:'legendary', unlockLevel:32, body:'#0b0c10', visor:'#7af9ff', stripe:'#ff3df2' }
-  
-  , { id:'ufo_flux',       name:'UFO Flux',       price:36000, rarity:'epic',      unlockLevel:12, body:'#1b1e2a', visor:'#8af5ff', stripe:'#b48bff', shape:'ufo',      hasUnderglow:true, hasTrail:true }
-  , { id:'ufo_aurora',     name:'UFO Aurora',     price:52000, rarity:'legendary', unlockLevel:16, body:'#121426', visor:'#ffd36d', stripe:'#7af9ff', shape:'ufo',      hasUnderglow:true, hasTrail:true }
-  , { id:'jetpack_rush',   name:'Jetpack Rush',   price:32000, rarity:'epic',      unlockLevel:11, body:'#151a24', visor:'#7af9ff', stripe:'#ff7ae6', shape:'jetpack', size:{w:40,h:64}, hasSparks:true, hasTrail:true }
-  , { id:'jetpack_stellar',name:'Jetpack Stellar',price:48000, rarity:'legendary', unlockLevel:15, body:'#0f1420', visor:'#ffe66d', stripe:'#2cf9ff', shape:'jetpack', size:{w:40,h:64}, hasSparks:true, hasTrail:true }
-  , { id:'spider_neon',    name:'Spider Neon',    price:34000, rarity:'epic',      unlockLevel:13, body:'#191919', visor:'#8af5ff', stripe:'#ff3df2', shape:'spider',  size:{w:56,h:54}, hasLegs:true, hasTrail:true }
-  , { id:'spider_spectre', name:'Spider Spectre', price:50000, rarity:'legendary', unlockLevel:17, body:'#0e0e14', visor:'#ffd36d', stripe:'#8ac6ff', shape:'spider',  size:{w:56,h:54}, hasLegs:true, hasTrail:true }
-];
+  ];
 
   // --- Deterministic 100 levels (harder/dynamic from v7.3c) ---
   const LEVELS = buildConstantLevels(100);
@@ -148,6 +159,9 @@
 
   let inventory = loadInventory(); if (!inventory.includes('default')) inventory.push('default');
   let themeInventory = loadThemeInventory(); if (!themeInventory.includes('cyan')) themeInventory.push('cyan'); // ensure starter theme
+ let backgroundInventory = loadBackgroundInventory(); if (!backgroundInventory.includes('sky_day')) backgroundInventory.push('sky_day');
+ let activeBackground = loadBackground() || 'sky_day';
+
 
   let equippedSkinId = loadSkin() || 'default';
   let bestLevel = loadBestLevel();
@@ -312,8 +326,6 @@
 
   // -------- Update --------
   function update(dt){
-  fxUpdate(dt);
-
     levelTime += dt; elLevelTime && (elLevelTime.textContent = formatTime(levelTime)); elTotalTime && (elTotalTime.textContent = formatTime(totalTime));
 
     const accel = (input.left? -1:0) + (input.right? 1:0); player.vx += accel * MOVE_ACCEL * dt; if (accel === 0 && player.onGround) player.vx *= FRICTION_GROUND; player.vx = clamp(player.vx, -MAX_SPEED_X, MAX_SPEED_X);
@@ -353,17 +365,26 @@
   }
 
   // -------- Draw --------
-  function draw(){
-  fxDraw(ctx);
-
-
-// === Cosmetic FX (trails & sparks) ===
-const FX = { list: [] };
-function fxSpawn(p){ FX.list.push(p); }
-function fxUpdate(dt){ const a = FX.list; for (let i=a.length-1; i>=0; i--){ const p=a[i]; p.life -= dt; if (p.life<=0){ a.splice(i,1); continue; } p.x += p.vx*dt; p.y += p.vy*dt; p.vx *= 0.98; p.vy += (p.gravity||0)*dt; } }
-function fxDraw(ctx){ const a = FX.list; for (let i=0;i<a.length;i++){ const p=a[i]; const t=Math.max(0, Math.min(1, p.life/p.max)); ctx.globalAlpha=(p.alpha||1)*t; ctx.fillStyle=p.color||'rgba(255,255,255,0.9)'; if(p.kind==='circle'){ ctx.beginPath(); ctx.arc(p.x,p.y,p.r||2,0,Math.PI*2); ctx.fill(); } else { ctx.fillRect(p.x,p.y,p.w||2,p.h||2); } ctx.globalAlpha=1; } }
+  
+ function drawBackground(ctx, w, h){
+   ctx.clearRect(0,0,w,h);
+   const t = performance.now()*0.001;
+   switch(activeBackground){
+     case 'sky_day': { const g=ctx.createLinearGradient(0,0,0,h); g.addColorStop(0,'#87CEFA'); g.addColorStop(1,'#E0FFFF'); ctx.fillStyle=g; ctx.fillRect(0,0,w,h); break; }
+     case 'sky_night': { ctx.fillStyle='#0a0d2b'; ctx.fillRect(0,0,w,h); ctx.fillStyle='rgba(255,255,255,0.85)'; for(let i=0;i<120;i++){ const x=(i*127.1)%w, y=(i*311.7)%h; const r=(i%3===0?1.2:(i%3===1?0.9:0.7)); ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fill(); } const g=ctx.createLinearGradient(0,0,0,h); g.addColorStop(0,'rgba(26,30,66,0.2)'); g.addColorStop(1,'rgba(0,0,0,0.4)'); ctx.fillStyle=g; ctx.fillRect(0,0,w,h); break; }
+     case 'retro_grid': { const g=ctx.createLinearGradient(0,0,0,h); g.addColorStop(0,'#1a002b'); g.addColorStop(0.5,'#0e0122'); g.addColorStop(1,'#080816'); ctx.fillStyle=g; ctx.fillRect(0,0,w,h); ctx.save(); ctx.strokeStyle='rgba(255,0,153,0.35)'; ctx.shadowColor='rgba(255,0,153,0.6)'; ctx.shadowBlur=6; const spacing=40; const offset=(t*20)%spacing; for(let y=h*0.6;y<h;y+=spacing){ ctx.beginPath(); ctx.moveTo(0,y+offset); ctx.lineTo(w,y+offset); ctx.stroke(); } ctx.strokeStyle='rgba(0,255,255,0.25)'; ctx.shadowColor='rgba(0,255,255,0.5)'; for(let x=0;x<w;x+=spacing){ ctx.beginPath(); ctx.moveTo(x+offset,h*0.6); ctx.lineTo(x+offset,h); ctx.stroke(); } ctx.restore(); break; }
+     case 'forest': { const g=ctx.createLinearGradient(0,0,0,h); g.addColorStop(0,'#0b3d0b'); g.addColorStop(0.6,'#145214'); g.addColorStop(1,'#0c2b0c'); ctx.fillStyle=g; ctx.fillRect(0,0,w,h); break; }
+     case 'space': { ctx.fillStyle='#080814'; ctx.fillRect(0,0,w,h); const rad=(cx,cy,r,c)=>{ const rg=ctx.createRadialGradient(cx,cy,0,cx,cy,r); rg.addColorStop(0,c); rg.addColorStop(1,'rgba(0,0,0,0)'); return rg; }; ctx.fillStyle=rad(-0.1*w,-0.1*h, Math.max(w,h)*0.8, 'rgba(126,87,194,0.35)'); ctx.fillRect(0,0,w,h); ctx.fillStyle=rad(1.2*w,0.2*h, Math.max(w,h)*0.6, 'rgba(0,188,212,0.25)'); ctx.fillRect(0,0,w,h); ctx.fillStyle='rgba(255,255,255,0.9)'; for(let i=0;i<140;i++){ const x=(i*73.1)%w, y=(i*97.3)%h; const r=(i%4===0?1.4:(i%4===1?1.1:0.8)); ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fill(); } break; }
+     case 'underwater': { const g=ctx.createLinearGradient(0,0,0,h); g.addColorStop(0,'#0e81b4'); g.addColorStop(1,'#0b597a'); ctx.fillStyle=g; ctx.fillRect(0,0,w,h); ctx.save(); ctx.globalAlpha=0.08; ctx.fillStyle='#ffffff'; for(let i=0;i<8;i++){ const cx=(i*123.4+t*40)%w; const cy=(i*77.7)%h*0.6; const r=200+(i%3)*120; ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.fill(); } ctx.restore(); break; }
+     case 'lava': { const g=ctx.createLinearGradient(0,0,0,h); g.addColorStop(0,'#5b0e0e'); g.addColorStop(0.5,'#f24d0d'); g.addColorStop(1,'#360101'); ctx.fillStyle=g; ctx.fillRect(0,0,w,h); break; }
+     case 'stadium': { const g=ctx.createLinearGradient(0,0,0,h); g.addColorStop(0,'#064d1e'); g.addColorStop(1,'#0a7d33'); ctx.fillStyle=g; ctx.fillRect(0,0,w,h); ctx.save(); ctx.globalAlpha=0.35; ctx.fillStyle='#0f8d3c'; const stripe=28; for(let i=-w;i<w*2;i+=stripe*2){ ctx.beginPath(); ctx.moveTo(i,0); ctx.lineTo(i+stripe,h); ctx.lineTo(i+stripe*2,h); ctx.lineTo(i+stripe,0); ctx.closePath(); ctx.fill(); } ctx.restore(); break; }
+     default: { const g=ctx.createLinearGradient(0,0,0,h); g.addColorStop(0,'#0b0c0f'); g.addColorStop(1,'#161514'); ctx.fillStyle=g; ctx.fillRect(0,0,w,h); }
+   }
+ }
+function draw(){
     const w = canvas.width, h = canvas.height; const scaleX = w / WORLD.w, scaleY = h / WORLD.h; const s = Math.min(scaleX, scaleY);
-    const g = ctx.createLinearGradient(0,0,0,h); g.addColorStop(0,'#0b0c0f'); g.addColorStop(1,'#161514'); ctx.fillStyle = g; ctx.fillRect(0,0,w,h);
+    drawBackground(ctx, w, h);
+
     ctx.save(); ctx.translate((w - WORLD.w * s)/2, (h - WORLD.h * s)/2); ctx.scale(s, s); ctx.translate(0, -camY);
     drawNeonPipes(ctx);
     ctx.save(); ctx.lineWidth=3; ctx.setLineDash([10,8]); neonStroke(ctx, ()=>{ ctx.beginPath(); ctx.moveTo(24, goalY); ctx.lineTo(WORLD.w-24, goalY); ctx.stroke(); }, getAccentColor(), 18); ctx.restore();
@@ -379,50 +400,7 @@ function fxDraw(ctx){ const a = FX.list; for (let i=0;i<a.length;i++){ const p=a
 
   function currentSkin(){ return SKINS.find(s=>s.id===equippedSkinId) || SKINS[0]; }
 
-  const SKIN_BASE_W = 44, SKIN_BASE_H = 56;
-  function getSkinDims(skin){
-    const s = skin || currentSkin();
-    let w = SKIN_BASE_W, h = SKIN_BASE_H;
-    if (s && s.size){ w = Math.round(s.size.w||SKIN_BASE_W); h = Math.round(s.size.h||SKIN_BASE_H); }
-    else if (s && s.scale){ w = Math.round(SKIN_BASE_W * s.scale); h = Math.round(SKIN_BASE_H * s.scale); }
-    w = clamp(w, 34, 64); h = clamp(h, 44, 76);
-    return {w,h};
-  }
-  function applySkinMetrics(skin){ try{
-    const s = skin || currentSkin();
-    const dims = getSkinDims(s);
-    const oldW = player.w, oldH = player.h;
-    const feetY = player.y + oldH;
-    player.w = dims.w; player.h = dims.h;
-    player.x += player.x += (oldW - dims.w) * 0.5;
-
-  { const s=currentSkin(); const speed=Math.hypot(player.vx||0, player.vy||0); if (s && s.hasTrail && speed>120){ fxSpawn({ kind:'circle', x: player.x + player.w/2, y: player.y + player.h*0.9, vx: -(player.vx||0)*0.05 + (Math.random()-0.5)*20, vy: (player.vy||0)*-0.02, life:0.35, max:0.35, r: 2+Math.random()*2, color: getAccent2Color(), alpha:0.9 }); } }
-    player.y = feetY - dims.h;
-    if (player.x < 0) player.x = 0; if (player.x + player.w > WORLD.w) player.x = WORLD.w - player.w;
-  }catch(e){} }
-
-  function drawPlayer(ctx, pl){ const skin = currentSkin(); const x=pl.x, y=pl.y, w=pl.w, h=pl.h; const now = performance.now()*0.004; const pulse=(Math.sin(now*3)+1)/2; const visorColor = (skin.rarity==='legendary' && pulse>0.5)? getAccentColor(): (skin.visor||'#7af9ff'); const stripeColor = (skin.rarity==='legendary' && pulse>0.5)? getAccentColor(): (skin.stripe||'#ffe66d'); const shape = skin.shape||'rect';
-  ctx.save(); ctx.fillStyle=skin.body||'#303136';
-  if (shape==='ufo'){
-    const rY = Math.min(w,h)*0.22, rX = Math.min(w,h)*0.48; const cx=x+w/2, cy=y+h*0.52;
-    if (skin.hasUnderglow){ ctx.save(); ctx.globalAlpha = 0.18 + 0.18*Math.sin(performance.now()*0.008); ctx.fillStyle = getAccent2Color(); ctx.beginPath(); ctx.ellipse(cx, y+h*0.95, rX*1.2, rY*0.9, 0, 0, Math.PI*2); ctx.fill(); ctx.restore(); }
-    neonFill(ctx, ()=>{ ctx.beginPath(); ctx.ellipse(cx, cy, rX, rY, 0, 0, Math.PI*2); ctx.fill(); }, getAccent2Color(), 12);
-    neonFill(ctx, ()=>{ roundRect(ctx, cx - rX*0.55, cy - rY*0.8, rX*1.1, rY*0.6, rY*0.25); ctx.fillStyle=visorColor; ctx.globalAlpha=skin.rarity==='legendary'?(0.7+0.3*pulse):1; ctx.fill(); }, visorColor, skin.rarity==='legendary'? 18:10);
-  } else if (shape==='jetpack'){
-    roundRect(ctx, x, y, w, h, 10); ctx.fill();
-    neonFill(ctx, ()=>{ roundRect(ctx, x+8, y+10, w-16, 16, 8); ctx.fillStyle=visorColor; ctx.globalAlpha=skin.rarity==='legendary'?(0.7+0.3*pulse):1; ctx.fill(); }, visorColor, skin.rarity==='legendary'?22:18);
-    neonFill(ctx, ()=>{ roundRect(ctx, x-6, y+h*0.32, 10, h*0.42, 5); ctx.fillStyle=stripeColor; ctx.fill(); roundRect(ctx, x+w-4, y+h*0.32, 10, h*0.42, 5); ctx.fill(); }, stripeColor, 12);
-    if (skin.hasSparks && pl.vy < -60){ const flame=(ox)=>{ neonFill(ctx, ()=>{ ctx.beginPath(); ctx.moveTo(ox, y+h*0.76); ctx.quadraticCurveTo(ox+4, y+h*0.95, ox, y+h*1.1); ctx.quadraticCurveTo(ox-4, y+h*0.95, ox, y+h*0.76); ctx.fillStyle = getAccent2Color(); ctx.fill(); }, getAccent2Color(), 10); }; flame(x-1); flame(x+w+1); }
-  } else if (shape==='spider'){
-    roundRect(ctx, x, y, w, h, 8); ctx.fill();
-    neonFill(ctx, ()=>{ roundRect(ctx, x+w*0.18, y+h*0.18, w*0.64, h*0.28, h*0.12); ctx.fillStyle=visorColor; ctx.globalAlpha=skin.rarity==='legendary'?(0.7+0.3*pulse):1; ctx.fill(); }, visorColor, skin.rarity==='legendary'?18:12);
-    if (skin.hasLegs){ const t = performance.now()*0.005; const bob = Math.sin(t)*2; ctx.lineWidth=2; ctx.strokeStyle=getAccent2Color(); const leg=(lx,dir)=>{ ctx.beginPath(); ctx.moveTo(lx, y+h*0.7); ctx.lineTo(lx+dir*8, y+h*0.82+bob); ctx.lineTo(lx+dir*14, y+h*0.94-bob); ctx.stroke(); }; ctx.save(); ctx.shadowBlur=8; ctx.shadowColor=getAccent2Color(); leg(x+6, -1); leg(x+14,-1); leg(x+w-6, 1); leg(x+w-14,1); ctx.restore(); }
-  } else {
-    roundRect(ctx,x,y,w,h,10); ctx.fill();
-    neonFill(ctx, ()=>{ roundRect(ctx, x+8, y+10, w-16, 16, 8); ctx.fillStyle = visorColor; ctx.globalAlpha = skin.rarity==='legendary'? (0.7 + 0.3*pulse) : 1; ctx.fill(); }, visorColor, skin.rarity==='legendary'? 22:18);
-  }
-  if (shape!=='ufo'){ neonFill(ctx, ()=>{ roundRect(ctx, x + w*0.15, y + h - 12, w*0.7, 6, 3); ctx.fillStyle = stripeColor; ctx.globalAlpha = skin.rarity==='legendary'? (0.65 + 0.35*pulse) : 1; ctx.fill(); }, stripeColor, skin.rarity==='legendary'? 18:10); }
-  ctx.restore(); }
+  function drawPlayer(ctx, pl){ const skin = currentSkin(); const x=pl.x, y=pl.y, w=pl.w, h=pl.h; ctx.fillStyle=skin.body; roundRect(ctx,x,y,w,h,10); ctx.fill(); const now = performance.now() * 0.004; const pulse = (Math.sin(now*3)+1)/2; const visorColor = skin.visor; const stripeColor = skin.stripe; const accent = getAccentColor(); const useAccent = (skin.rarity==='legendary' && pulse>0.5); neonFill(ctx, ()=>{ roundRect(ctx, x+8, y+10, w-16, 16, 8); ctx.fillStyle = useAccent? accent : visorColor; ctx.globalAlpha = skin.rarity==='legendary'? (0.7 + 0.3*pulse) : 1; ctx.fill(); }, useAccent? accent: visorColor, skin.rarity==='legendary'? 22:18); neonFill(ctx, ()=>{ roundRect(ctx, x + w*0.15, y + h - 12, w*0.7, 6, 3); ctx.fillStyle = useAccent? accent : stripeColor; ctx.globalAlpha = skin.rarity==='legendary'? (0.65 + 0.35*pulse) : 1; ctx.fill(); }, useAccent? accent: stripeColor, skin.rarity==='legendary'? 18:10); ctx.globalAlpha = 1; }
 
   function drawNeonPipes(ctx){ ctx.save(); ctx.globalAlpha=.18; for (let i=0;i<6;i++){ const x=(i+1)*WORLD.w/7; const color = i%3===0? getAccentColor(): (i%3===1? getAccent2Color(): '#ffe66d'); neonStroke(ctx, ()=>{ ctx.beginPath(); ctx.moveTo(x, camY - 200); ctx.lineTo(x, camY + WORLD.h + 300); ctx.lineWidth=2; ctx.strokeStyle=color; ctx.stroke(); }, color, 22); } ctx.restore(); }
 
@@ -486,9 +464,16 @@ function fxDraw(ctx){ const a = FX.list; for (let i=0;i<a.length;i++){ const p=a
     const grid = document.createElement('div'); grid.className='na-shop-grid'; body.appendChild(grid);
 
     let kind = 'skins';
-    function setKind(k){ kind = k; [...kindTabs.children].forEach(x=>x.classList.toggle('active', x.dataset.kind===k)); filter='all'; buildRarityTabs(); render(); }
+    function setKind(k){
+  kind = k;
+  [...kindTabs.children].forEach(x=>x.classList.toggle('active', x.dataset.kind===k));
+  filter='all'; buildRarityTabs();
+  if (k==='backgrounds'){ tabs.style.display='none'; } else { tabs.style.display='flex'; }
+  render();
+}
     btnSkins.addEventListener('click', ()=> setKind('skins'));
     btnThemes.addEventListener('click', ()=> setKind('themes'));
+ btnBgs.addEventListener('click', ()=> setKind('backgrounds'));
 
     function render(){ if (kind==='skins') renderShopGrid(grid, { filter, scope:'overlay' }); else renderThemeGrid(grid, { filter }); updateShopGoldBadges(); }
     render();
@@ -526,12 +511,22 @@ function fxDraw(ctx){ const a = FX.list; for (let i=0;i<a.length;i++){ const p=a
       if (!owned && (gold < skin.price || gated)){ btnBuy.classList.add('disabled'); }
 
       btnBuy.addEventListener('click', ()=>{ if (gated) return; if (gold >= skin.price){ gold -= skin.price; saveGold(); updateGoldUI(); inventory.push(skin.id); saveInventory(); btnBuy.style.display='none'; btnEquip.style.display=''; btnEquip.disabled=false; SFX.coin(); updateStatsUI(); updateShopGoldBadges(); } });
-      btnEquip.addEventListener('click', ()=>{ if (!inventory.includes(skin.id)) return; equippedSkinId = skin.id; saveSkin(); applySkinMetrics(currentSkin()); SFX.equip(); container.querySelectorAll('.na-card').forEach(c=>{ const sid = c.dataset.skin; const eqBtn = c.querySelector('.na-actions .btn:last-child'); if (eqBtn) eqBtn.disabled = (sid===equippedSkinId); }); });
+      btnEquip.addEventListener('click', ()=>{ if (!inventory.includes(skin.id)) return; equippedSkinId = skin.id; saveSkin(); SFX.equip(); container.querySelectorAll('.na-card').forEach(c=>{ const sid = c.dataset.skin; const eqBtn = c.querySelector('.na-actions .btn:last-child'); if (eqBtn) eqBtn.disabled = (sid===equippedSkinId); }); });
     });
   }
 
   // ----- Themes renderer (NEW) -----
-  function renderThemeGrid(container, { filter='all' }={}){
+  
+ // --- Backgrounds helpers
+ if (typeof todayKey === 'undefined'){
+   function todayKey(){ const d=new Date(); const m=String(d.getMonth()+1).padStart(2,'0'); const day=String(d.getDate()).padStart(2,'0'); return d.getFullYear()+"-"+m+"-"+day; }
+ }
+ const BG_THUMB_W = 260, BG_THUMB_H = 120;
+ function getBackgroundThumb(id){ const key = STORE.bgThumb + id; try{ const cached = localStorage.getItem(key); if (cached) return cached; }catch{} const cnv=document.createElement('canvas'); cnv.width=BG_THUMB_W; cnv.height=BG_THUMB_H; drawBackgroundPreview(cnv, id); const url=cnv.toDataURL('image/png'); try{ localStorage.setItem(key, url); }catch{} return url; }
+ function getBgOffers(){ const now=Date.now(); let exp=parseInt(localStorage.getItem(STORE.bgOfferExp)||'0',10); let offers={}; const regen=(!exp || now>exp); if (regen){ const ids=BACKGROUNDS.filter(b=>b.price>0).map(b=>b.id); const key=todayKey(); const h=(s)=>{ let h=2166136261>>>0; for(let i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,16777619);} return h>>>0;}; const i1=h(key+'A')%ids.length; let i2=h(key+'B')%ids.length; if(i2===i1) i2=(i2+1)%ids.length; const picks=[ids[i1], ids[i2]]; const dA=20+((h(key+'discA')%21)); const dB=20+((h(key+'discB')%21)); offers={}; picks.forEach((id,i)=>{ const base=BACKGROUNDS.find(x=>x.id===id).price; const disc=(i===0?dA:dB); const price=Math.max(100, Math.round(base*(1-disc/100))); offers[id]={ price, discount:disc }; }); const d=new Date(); d.setHours(24,0,0,0); exp=d.getTime(); try{ localStorage.setItem(STORE.bgOffers, JSON.stringify(offers)); localStorage.setItem(STORE.bgOfferExp, String(exp)); }catch{} } else { try{ offers=JSON.parse(localStorage.getItem(STORE.bgOffers)||'{}'); }catch{ offers={}; } } return { offers, expiresAt: exp }; }
+ function drawBackgroundPreview(cnv, id){ const ctx=cnv.getContext('2d'); const w=cnv.width, h=cnv.height; const saved=activeBackground||'sky_day'; activeBackground=id; drawBackground(ctx,w,h); activeBackground=saved; }
+ function renderBackgroundGrid(container){ container.innerHTML=''; const {offers}=getBgOffers(); const offerIds=Object.keys(offers); BACKGROUNDS.forEach(bg=>{ const card=document.createElement('div'); card.className='na-card'; card.dataset.bg=bg.id; const rowTop=document.createElement('div'); rowTop.className='na-card-top'; const name=document.createElement('div'); name.className='skin-name'; name.textContent=bg.name; rowTop.appendChild(name); if(offerIds.includes(bg.id)){ const ob=document.createElement('span'); ob.className='na-offer-badge'; ob.textContent='LIMITED'; rowTop.appendChild(ob);} const img=document.createElement('img'); img.className='bg-thumb'; img.alt=bg.name; img.src=getBackgroundThumb(bg.id); const meta=document.createElement('div'); meta.className='na-card-meta'; const priceEl=document.createElement('div'); priceEl.className='price'; const deal=offers[bg.id]; const eff=deal? deal.price : bg.price; priceEl.innerHTML = deal? `<s>🪙 ${bg.price}</s> 🪙 ${eff} (−${deal.discount}%)` : `🪙 ${eff}`; meta.appendChild(priceEl); const acts=document.createElement('div'); acts.className='na-actions'; const btnBuy=document.createElement('button'); btnBuy.className='btn'; btnBuy.textContent='Buy'; const btnApply=document.createElement('button'); btnApply.className='btn'; btnApply.textContent='Apply'; acts.appendChild(btnBuy); acts.appendChild(btnApply); card.appendChild(rowTop); card.appendChild(img); card.appendChild(meta); card.appendChild(acts); container.appendChild(card); const owned=backgroundInventory.includes(bg.id); const current=activeBackground===bg.id; btnBuy.style.display = owned? 'none':''; btnApply.style.display = owned? '':'none'; btnApply.disabled = !owned || current; if (!owned && gold < eff) btnBuy.classList.add('disabled'); btnBuy.addEventListener('click', ()=>{ if (gold >= eff){ gold -= eff; saveGold(); updateGoldUI(); backgroundInventory.push(bg.id); saveBackgroundInventory(); btnBuy.style.display='none'; btnApply.style.display=''; btnApply.disabled=false; if (window.SFX && SFX.coin) SFX.coin(); } }); btnApply.addEventListener('click', ()=>{ if (!backgroundInventory.includes(bg.id)) return; applyBackground(bg.id); applyBodyBackgroundClass && applyBodyBackgroundClass(bg.id); if (window.SFX && SFX.equip) SFX.equip(); container.querySelectorAll('.na-card').forEach(c=>{ const eqBtn=c.querySelector('.na-actions .btn:last-child'); const id=c.dataset.bg; if (eqBtn) eqBtn.disabled = (id===activeBackground); }); }); }); }
+function renderThemeGrid(container, { filter='all' }={}){
     container.innerHTML='';
     const themes = THEMES.filter(t=> filter==='all' ? true : (t.rarity===filter));
     themes.forEach(theme=>{
@@ -744,7 +739,13 @@ function fxDraw(ctx){ const a = FX.list; for (let i=0;i<a.length;i++){ const p=a
   function clearSave(){ try{ localStorage.removeItem(STORE.save); }catch{} }
   function loadSave(){ try{ const s = localStorage.getItem(STORE.save); return s? JSON.parse(s) : null; }catch{ return null; } }
 
-  // --- Daily gift ---
+  
+ // Background storage
+ function saveBackground(id){ try{ localStorage.setItem(STORE.bg, id); }catch{} }
+ function loadBackground(){ try{ return localStorage.getItem(STORE.bg) || 'sky_day'; }catch{ return 'sky_day'; } }
+ function loadBackgroundInventory(){ try{ return JSON.parse(localStorage.getItem(STORE.bgInv) || '[]'); }catch{ return []; } }
+ function saveBackgroundInventory(){ try{ localStorage.setItem(STORE.bgInv, JSON.stringify(backgroundInventory)); }catch{} }
+// --- Daily gift ---
   function todayKey(){ const d = new Date(); const y=d.getFullYear(); const m=String(d.getMonth()+1).padStart(2,'0'); const day=String(d.getDate()).padStart(2,'0'); return `${y}-${m}-${day}`; }
   function loadDaily(){ try{ return localStorage.getItem(STORE.daily)||''; }catch{ return ''; } }
   function saveDaily(v){ try{ localStorage.setItem(STORE.daily, v); }catch{} }
@@ -766,3 +767,11 @@ function fxDraw(ctx){ const a = FX.list; for (let i=0;i<a.length;i++){ const p=a
   // ---------- end of IIFE ----------
   console.log('[Neon Ascent] game.js v7.4 loaded OK');
 })();
+
+
+ function applyBodyBackgroundClass(id){
+   const map = { 'sky_day':'bg-sky-day','sky_night':'bg-sky-night','retro_grid':'bg-retro-grid','forest':'bg-forest','space':'bg-space','underwater':'bg-underwater','lava':'bg-lava','stadium':'bg-stadium' };
+   const cls = map[id]; if (!cls) return;
+   document.body.classList.remove('bg-sky-day','bg-sky-night','bg-retro-grid','bg-forest','bg-space','bg-underwater','bg-lava','bg-stadium');
+   document.body.classList.add(cls);
+ }
