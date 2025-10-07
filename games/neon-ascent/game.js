@@ -53,9 +53,6 @@
   }
 
   const STORE = {
- bgOffers: 'neonAscent_bgOffers',
- bgOfferExp: 'neonAscent_bgOfferExp',
- bgThumb: 'neonAscent_bgThumb_v1_',
     pb: (lvl)=> `neonAscent_pb_level_${lvl}`,
     theme: 'neonAscent_theme',
     themeInv: 'neonAscent_themeInventory', // NEW: owned themes
@@ -406,40 +403,7 @@
   }
 
   // ----- SHOP as modal (Skins + Themes) -----
-  
- // Limited-time background offers
- function getBgOffers(){
-   const now = Date.now();
-   let exp = parseInt(localStorage.getItem(STORE.bgOfferExp)||'0',10);
-   let offers = {};
-   const regen = (!exp || now > exp);
-   if (regen){
-     // pick two backgrounds deterministically based on todayKey
-     const ids = BACKGROUNDS.filter(b=>b.price>0).map(b=>b.id);
-     const key = todayKey();
-     const h1 = Math.abs(hashStr(key+'A')) % ids.length;
-     let h2 = Math.abs(hashStr(key+'B')) % ids.length; if (h2===h1) h2 = (h2+1)%ids.length;
-     const picks = [ids[h1], ids[h2]];
-     const discA = 0.20 + (Math.abs(hashStr(key+'discA'))%21)/100; // 20-40%
-     const discB = 0.20 + (Math.abs(hashStr(key+'discB'))%21)/100;
-     offers = {};
-     picks.forEach((id,i)=>{
-       const base = BACKGROUNDS.find(x=>x.id===id).price;
-       const d = i===0?discA:discB;
-       const newP = Math.max(100, Math.round(base*(1-d)));
-       offers[id] = { price:newP, discount: Math.round(d*100) };
-     });
-     // Expire at next local midnight
-     const d = new Date(); d.setHours(24,0,0,0); exp = d.getTime();
-     try{ localStorage.setItem(STORE.bgOffers, JSON.stringify(offers)); localStorage.setItem(STORE.bgOfferExp, String(exp)); }catch{}
-   }else{
-     try{ offers = JSON.parse(localStorage.getItem(STORE.bgOffers)||'{}'); }catch{ offers = {}; }
-   }
-   return { offers, expiresAt: exp };
- }
- function hashStr(s){ let h=2166136261>>>0; for(let i=0;i<s.length;i++){ h ^= s.charCodeAt(i); h = Math.imul(h,16777619); } return h|0; }
- function formatCountdown(ms){ if(ms<=0) return '00:00:00'; const sec=Math.floor(ms/1000); const h=Math.floor(sec/3600); const m=Math.floor((sec%3600)/60); const s=sec%60; const pad=n=>String(n).padStart(2,'0'); return `${pad(h)}:${pad(m)}:${pad(s)}`; }
-function openShopModal(){
+  function openShopModal(){
     const shop = ensureModal('modal-shop', 'Shop'); const body = shop.querySelector('.na-modal-body'); body.innerHTML = '';
 
     // Product type tabs: Skins | Themes
@@ -450,9 +414,7 @@ function openShopModal(){
 
     // header row with gold
     const head = document.createElement('div'); head.style.display='flex'; head.style.gap='12px'; head.style.alignItems='center'; head.style.marginBottom='10px';
- const offerEta = document.createElement('div'); offerEta.className='na-shop-offer'; offerEta.id='bg-offers-eta';
     const goldBadge = document.createElement('div'); goldBadge.className='na-shop-gold'; goldBadge.textContent = `🪙 ${gold}`; head.appendChild(goldBadge); body.appendChild(head);
- head.appendChild(offerEta);
 
     // rarity filter tabs
     const tabs = document.createElement('div'); tabs.className='na-shop-tabs'; body.appendChild(tabs);
@@ -464,17 +426,7 @@ function openShopModal(){
     const grid = document.createElement('div'); grid.className='na-shop-grid'; body.appendChild(grid);
 
     let kind = 'skins';
-    
- let bgOfferTimer = null;
- function startOfferEtaLoop(){ const el=document.getElementById('bg-offers-eta'); if(!el) return; stopOfferEtaLoop(); const data = getBgOffers(); const tick=()=>{ const ms = Math.max(0, data.expiresAt - Date.now()); el.textContent = `Offers end in: ${formatCountdown(ms)}`; if (ms<=0) { stopOfferEtaLoop(); el.textContent = 'Refreshing offers…'; } }; tick(); bgOfferTimer = setInterval(tick, 1000); }
- function stopOfferEtaLoop(){ if(bgOfferTimer){ clearInterval(bgOfferTimer); bgOfferTimer=null; } }
-function setKind(k){
-  kind = k;
-  [...kindTabs.children].forEach(x=>x.classList.toggle('active', x.dataset.kind===k));
-  filter='all'; buildRarityTabs();
-  if (k==='backgrounds') { tabs.style.display='none'; startOfferEtaLoop(); } else { tabs.style.display='flex'; stopOfferEtaLoop(); }
-  render();
-}
+    function setKind(k){ kind = k; [...kindTabs.children].forEach(x=>x.classList.toggle('active', x.dataset.kind===k)); filter='all'; buildRarityTabs(); render(); }
     btnSkins.addEventListener('click', ()=> setKind('skins'));
     btnThemes.addEventListener('click', ()=> setKind('themes'));
 
