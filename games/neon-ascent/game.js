@@ -7,7 +7,7 @@
  * - Skins shop unchanged; economy & level difficulty from v7.3c retained
  * ----------------------------------------------------- */
 (() => {
-  console.log('[Neon Ascent] game.js start v7.4');
+  console.log('[Neon Ascent] game.js start v7.4'); console.log('[Neon Ascent] BUILD NA-2025-10-07c');
 
   // TDZ fix: declare audio before updateMuteButton() can run
   let audio = null;
@@ -161,6 +161,7 @@
   const elGoldHUD = document.getElementById('gold-hud');
   const elGoldTop = document.getElementById('gold-top');
   const elGoldShop = document.getElementById('gold-shop');
+const elGoldDrawer = document.getElementById('gold-drawer');
 
   const elLevelTime = document.getElementById('level-time');
   const elTotalTime = document.getElementById('total-time');
@@ -194,6 +195,26 @@
   const statStreak = document.getElementById('stat-streak');
   const statCombo = document.getElementById('stat-combo');
   const pbList = document.getElementById('pb-list');
+
+  // === Hamburger / Drawer glue ===
+  const hamburger = document.getElementById('hamburger');
+  const drawer = document.getElementById('main-nav');
+  function openDrawer(){ if(!drawer||!hamburger) return; drawer.classList.add('open'); hamburger.setAttribute('aria-expanded','true'); document.body.classList.add('no-scroll'); const goldEl = document.getElementById('gold-drawer'); if (goldEl) goldEl.textContent = String(gold); const muteBtnNav = drawer.querySelector('[data-nav="mute"]'); if (muteBtnNav) muteBtnNav.textContent = muted? 'Sound: Off' : 'Sound: On'; }
+  function closeDrawer(){ if(!drawer||!hamburger) return; drawer.classList.remove('open'); hamburger.setAttribute('aria-expanded','false'); document.body.classList.remove('no-scroll'); }
+  if (hamburger && drawer){
+    hamburger.addEventListener('click', ()=>{ const isOpen = drawer.classList.contains('open'); isOpen ? closeDrawer() : openDrawer(); });
+    drawer.addEventListener('click', (e)=>{
+      const act = e.target && e.target.getAttribute('data-nav');
+      if(!act) return;
+      if(act==='shop') openShopModal && openShopModal();
+      else if(act==='stats') openStats && openStats();
+      else if(act==='gift') tryClaimDailyGift && tryClaimDailyGift();
+      else if(act==='mute'){ muted=!muted; saveMuted(muted); updateMuteButton(); }
+      else if(act==='pause'){ if(gameState==='running') pauseGame && pauseGame(); else resumeWithCountdown && resumeWithCountdown(2); }
+      closeDrawer();
+    });
+    window.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeDrawer(); });
+  }
   const giftBtn = document.getElementById('gift-btn');
 
   const summaryOv = document.getElementById('summary-overlay');
@@ -655,7 +676,8 @@
   function loadLifetimeGold(){ try{ return parseInt(localStorage.getItem(STORE.lifetime)||'0',10) || 0; }catch{ return 0; } }
   function saveLifetimeGold(){ try{ localStorage.setItem(STORE.lifetime, String(lifetimeGold)); }catch{} }
 
-  function updateGoldUI(){ elGoldHUD && (elGoldHUD.textContent = String(gold)); elGoldTop && (elGoldTop.textContent = String(gold)); elGoldShop && (elGoldShop.textContent = String(gold)); statBal && (statBal.textContent = String(gold)); updateShopGoldBadges(); }
+  function updateGoldUI(){ elGoldHUD && (elGoldHUD.textContent = String(gold)); elGoldTop && (elGoldTop.textContent = String(gold)); elGoldShop && (elGoldShop.textContent = String(gold)); statBal && (statBal.textContent = String(gold)); updateShopGoldBadges(); 
+ elGoldDrawer && (elGoldDrawer.textContent = String(gold));}
 
   function loadInventory(){ try{ return JSON.parse(localStorage.getItem(STORE.inv)||'[]'); }catch{ return []; } }
   function saveInventory(){ try{ localStorage.setItem(STORE.inv, JSON.stringify(inventory)); }catch{} }

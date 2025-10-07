@@ -8,6 +8,9 @@
 </head>
 <body class="theme-cyan">
   <header id="topbar">
+    <button id="hamburger" class="hamburger" aria-label="Open menu" aria-expanded="false" aria-controls="main-nav">
+      <span></span><span></span><span></span>
+    </button>
     <a id="back-link" href="../../" aria-label="Back to home">← Back to home</a>
     <div id="brand" aria-label="Maltes gamingsida!">
       <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" class="logo-icon">
@@ -29,6 +32,20 @@
       <button id="mute-btn" type="button" aria-pressed="false" aria-label="Toggle sound">🔊</button>
     </div>
   </header>
+  <nav id="main-nav" class="nav" aria-label="Main navigation">
+    <div class="nav-head">
+      <div class="brand">Maltes gamingsida!</div>
+      <div class="nav-coins">🪙 <span id="gold-drawer">0</span></div>
+    </div>
+    <ul class="menu">
+      <li><button class="nav-btn" data-nav="shop">Shop</button></li>
+      <li><button class="nav-btn" data-nav="stats">Stats</button></li>
+      <li><button class="nav-btn" data-nav="gift">Claim Daily Gift</button></li>
+      <li><button class="nav-btn" data-nav="mute">Sound: On</button></li>
+      <li><button class="nav-btn" data-nav="pause">Pause</button></li>
+      <li><a class="nav-link" href="../../">← Back to home</a></li>
+    </ul>
+  </nav>
 
   <canvas id="game" aria-label="Neon Ascent game canvas" role="img"></canvas>
 
