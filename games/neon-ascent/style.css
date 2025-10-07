@@ -90,20 +90,18 @@ body{margin:0; background: radial-gradient(1200px 800px at 20% 10%, #1b1d21 0%, 
 
 
 
-/* === Hamburger & Drawer Navigation (game page) === */
-.hamburger { position:absolute; right:12px; top:8px; width:44px; height:44px; display:grid; place-items:center; background:none; border:0; cursor:pointer; z-index:13; }
-.hamburger span { width:24px; height:2px; background:#fff; display:block; margin:4px 0; transition: transform .25s, opacity .2s; }
-.hamburger[aria-expanded="true"] span:nth-child(1) { transform: translateY(6px) rotate(45deg); }
-.hamburger[aria-expanded="true"] span:nth-child(2) { opacity:0; }
-.hamburger[aria-expanded="true"] span:nth-child(3) { transform: translateY(-6px) rotate(-45deg); }
+/* === Background body themes === */
+body.bg-sky-day { background: linear-gradient(180deg, #87CEFA 0%, #E0FFFF 100%) !important; }
+body.bg-sky-night { background-color:#0a0d2b !important; background-image: radial-gradient(2px 2px at 20% 30%, rgba(255,255,255,.8), transparent 50%), radial-gradient(1.5px 1.5px at 60% 70%, rgba(255,255,255,.7), transparent 50%), radial-gradient(1px 1px at 80% 20%, rgba(255,255,255,.6), transparent 50%), linear-gradient(180deg, #0a0d2b, #1b1e3c) !important; }
+body.bg-retro-grid { background: linear-gradient(to top, rgba(255,0,153,.12), rgba(0,255,255,.12)), radial-gradient(750px 200px at 50% 140%, rgba(255,0,153,.25), transparent 60%), repeating-linear-gradient(#0b002b 0 2px, #120445 2px 4px) !important; }
+body.bg-forest { background: linear-gradient(180deg, #0b3d0b 0%, #145214 60%, #0c2b0c 100%) !important; }
+body.bg-space { background-color:#080814 !important; background-image: radial-gradient(1000px 400px at -10% -10%, rgba(126,87,194,.25), transparent 60%), radial-gradient(800px 300px at 120% 20%, rgba(0,188,212,.2), transparent 60%), radial-gradient(2px 2px at 40% 50%, rgba(255,255,255,.7), transparent 50%), radial-gradient(1px 1px at 70% 30%, rgba(255,255,255,.5), transparent 50%) !important; }
+body.bg-underwater { background: radial-gradient(1200px 400px at 50% -20%, rgba(255,255,255,.10), transparent 60%), linear-gradient(180deg, #0e81b4 0%, #0b597a 100%) !important; }
+body.bg-lava { background: radial-gradient(900px 280px at 50% -20%, rgba(255,255,255,.08), transparent 60%), linear-gradient(180deg, #5b0e0e, #f24d0d 50%, #360101 100%) !important; background-blend-mode: screen, normal; }
+body.bg-stadium { background: repeating-linear-gradient(135deg, #0a7d33 0 14px, #0f8d3c 14px 28px), linear-gradient(180deg, #064d1e, #0a7d33) !important; }
 
-.nav { position: fixed; inset: 0 0 0 30%; transform: translateX(100%); transition: transform .28s ease; background: rgba(11,15,25,.98); z-index: 1000; padding-top: 64px; box-shadow: -6px 0 24px rgba(0,0,0,.5); pointer-events:none; visibility:hidden; }
-.nav.open { transform: translateX(0); pointer-events:auto; visibility:visible; }
-.nav-head { position: sticky; top:0; display:flex; align-items:center; justify-content:space-between; gap:12px; padding: 10px 14px; border-bottom:1px solid rgba(255,255,255,.06); background: rgba(11,15,25,.98); }
-.nav-head .brand { font-weight:800; letter-spacing:.3px; }
-.nav-head .nav-coins { font-weight:800; }
-.nav .menu { list-style:none; margin:0; padding: 10px 8px; display:grid; gap:6px; }
-.nav .menu .nav-btn, .nav .menu .nav-link { display:block; width:100%; text-align:left; color:#fff; background: rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12); border-radius:10px; padding:10px 12px; text-decoration:none; cursor:pointer; }
-.nav .menu .nav-btn:hover, .nav .menu .nav-link:hover { background: rgba(255,255,255,.1); }
-
-@media (min-width: 861px) { /* desktop: show burger by choice */ }
+/* Background shop & offers */
+.bg-thumb{ width:100%; height:auto; display:block; border-radius:8px; border:1px solid rgba(255,255,255,0.06); box-shadow: 0 0 18px rgba(0,0,0,0.25) inset; }
+.na-offer-badge{ font-size:11px; font-weight:900; color:#0b0c0f; background: linear-gradient(180deg, #ffd36d, #ffbe5c); border:1px solid #ffd36d; border-radius:999px; padding:2px 8px; margin-left:8px; box-shadow: 0 0 10px rgba(255,211,109,0.3); }
+.price{ font-weight:700; }
+.price s{ opacity:.6; margin-right:6px; }

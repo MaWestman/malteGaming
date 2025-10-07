@@ -7,7 +7,7 @@
  * - Skins shop unchanged; economy & level difficulty from v7.3c retained
  * ----------------------------------------------------- */
 (() => {
-  console.log('[Neon Ascent] game.js start v7.4'); console.log('[Neon Ascent] BUILD NA-2025-10-07c');
+  console.log('[Neon Ascent] game.js start v7.4'); console.log('[Neon Ascent] BUILD NA-2025-10-07d (backgrounds integrated)');
 
   // TDZ fix: declare audio before updateMuteButton() can run
   let audio = null;
@@ -53,6 +53,11 @@
   }
 
   const STORE = {
+ bg: 'neonAscent_background',
+ bgInv: 'neonAscent_backgroundInventory',
+ bgOffers: 'neonAscent_bgOffers',
+ bgOfferExp: 'neonAscent_bgOfferExp',
+ bgThumb: 'neonAscent_bgThumb_v1_',
     pb: (lvl)=> `neonAscent_pb_level_${lvl}`,
     theme: 'neonAscent_theme',
     themeInv: 'neonAscent_themeInventory', // NEW: owned themes
@@ -100,6 +105,19 @@
     { id:'nebulon',   name:'Nebulon',     unlock:45, rarity:'legendary', price:70000, accent:'#7af9ff', accent2:'#b48bff' }
   ];
 
+ // --- Backgrounds (coin-purchasable)
+ const BACKGROUNDS = [
+   { id:'sky_day',    name:'Sky — Day',     price:1500 },
+   { id:'sky_night',  name:'Sky — Night',   price:1800 },
+   { id:'retro_grid', name:'Retro Grid',    price:2200 },
+   { id:'forest',     name:'Forest',        price:2000 },
+   { id:'space',      name:'Space Nebula',  price:2600 },
+   { id:'underwater', name:'Underwater',    price:2100 },
+   { id:'lava',       name:'Lava Cave',     price:2400 },
+   { id:'stadium',    name:'Stadium Grass', price:1900 },
+ ];
+
+
   // Skins (repriced for new economy) — unchanged
   const SKINS = [
     { id:'default',  name:'Default Neon',     price:0,     rarity:'common',    unlockLevel:1,  body:'#303136', visor:'#2cf9ff', stripe:'#ff3df2' },
@@ -141,6 +159,10 @@
 
   let inventory = loadInventory(); if (!inventory.includes('default')) inventory.push('default');
   let themeInventory = loadThemeInventory(); if (!themeInventory.includes('cyan')) themeInventory.push('cyan'); // ensure starter theme
+ let backgroundInventory = loadBackgroundInventory(); if (!backgroundInventory.includes('sky_day')) backgroundInventory.push('sky_day');
+ let activeBackground = loadBackground() || 'sky_day';
+ applyBodyBackgroundClass && applyBodyBackgroundClass(activeBackground);
+
 
   let equippedSkinId = loadSkin() || 'default';
   let bestLevel = loadBestLevel();
@@ -161,7 +183,6 @@
   const elGoldHUD = document.getElementById('gold-hud');
   const elGoldTop = document.getElementById('gold-top');
   const elGoldShop = document.getElementById('gold-shop');
-const elGoldDrawer = document.getElementById('gold-drawer');
 
   const elLevelTime = document.getElementById('level-time');
   const elTotalTime = document.getElementById('total-time');
@@ -195,26 +216,6 @@ const elGoldDrawer = document.getElementById('gold-drawer');
   const statStreak = document.getElementById('stat-streak');
   const statCombo = document.getElementById('stat-combo');
   const pbList = document.getElementById('pb-list');
-
-  // === Hamburger / Drawer glue ===
-  const hamburger = document.getElementById('hamburger');
-  const drawer = document.getElementById('main-nav');
-  function openDrawer(){ if(!drawer||!hamburger) return; drawer.classList.add('open'); hamburger.setAttribute('aria-expanded','true'); document.body.classList.add('no-scroll'); const goldEl = document.getElementById('gold-drawer'); if (goldEl) goldEl.textContent = String(gold); const muteBtnNav = drawer.querySelector('[data-nav="mute"]'); if (muteBtnNav) muteBtnNav.textContent = muted? 'Sound: Off' : 'Sound: On'; }
-  function closeDrawer(){ if(!drawer||!hamburger) return; drawer.classList.remove('open'); hamburger.setAttribute('aria-expanded','false'); document.body.classList.remove('no-scroll'); }
-  if (hamburger && drawer){
-    hamburger.addEventListener('click', ()=>{ const isOpen = drawer.classList.contains('open'); isOpen ? closeDrawer() : openDrawer(); });
-    drawer.addEventListener('click', (e)=>{
-      const act = e.target && e.target.getAttribute('data-nav');
-      if(!act) return;
-      if(act==='shop') openShopModal && openShopModal();
-      else if(act==='stats') openStats && openStats();
-      else if(act==='gift') tryClaimDailyGift && tryClaimDailyGift();
-      else if(act==='mute'){ muted=!muted; saveMuted(muted); updateMuteButton(); }
-      else if(act==='pause'){ if(gameState==='running') pauseGame && pauseGame(); else resumeWithCountdown && resumeWithCountdown(2); }
-      closeDrawer();
-    });
-    window.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeDrawer(); });
-  }
   const giftBtn = document.getElementById('gift-btn');
 
   const summaryOv = document.getElementById('summary-overlay');
@@ -365,9 +366,26 @@ const elGoldDrawer = document.getElementById('gold-drawer');
   }
 
   // -------- Draw --------
-  function draw(){
+  
+ function drawBackground(ctx, w, h){
+   ctx.clearRect(0,0,w,h);
+   const t = performance.now()*0.001;
+   switch(activeBackground){
+     case 'sky_day': { const g=ctx.createLinearGradient(0,0,0,h); g.addColorStop(0,'#87CEFA'); g.addColorStop(1,'#E0FFFF'); ctx.fillStyle=g; ctx.fillRect(0,0,w,h); break; }
+     case 'sky_night': { ctx.fillStyle='#0a0d2b'; ctx.fillRect(0,0,w,h); ctx.fillStyle='rgba(255,255,255,0.85)'; for(let i=0;i<120;i++){ const x=(i*127.1)%w, y=(i*311.7)%h; const r=(i%3===0?1.2:(i%3===1?0.9:0.7)); ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fill(); } const g=ctx.createLinearGradient(0,0,0,h); g.addColorStop(0,'rgba(26,30,66,0.2)'); g.addColorStop(1,'rgba(0,0,0,0.4)'); ctx.fillStyle=g; ctx.fillRect(0,0,w,h); break; }
+     case 'retro_grid': { const g=ctx.createLinearGradient(0,0,0,h); g.addColorStop(0,'#1a002b'); g.addColorStop(0.5,'#0e0122'); g.addColorStop(1,'#080816'); ctx.fillStyle=g; ctx.fillRect(0,0,w,h); ctx.save(); ctx.strokeStyle='rgba(255,0,153,0.35)'; ctx.shadowColor='rgba(255,0,153,0.6)'; ctx.shadowBlur=6; const spacing=40; const offset=(t*20)%spacing; for(let y=h*0.6;y<h;y+=spacing){ ctx.beginPath(); ctx.moveTo(0,y+offset); ctx.lineTo(w,y+offset); ctx.stroke(); } ctx.strokeStyle='rgba(0,255,255,0.25)'; ctx.shadowColor='rgba(0,255,255,0.5)'; for(let x=0;x<w;x+=spacing){ ctx.beginPath(); ctx.moveTo(x+offset,h*0.6); ctx.lineTo(x+offset,h); ctx.stroke(); } ctx.restore(); break; }
+     case 'forest': { const g=ctx.createLinearGradient(0,0,0,h); g.addColorStop(0,'#0b3d0b'); g.addColorStop(0.6,'#145214'); g.addColorStop(1,'#0c2b0c'); ctx.fillStyle=g; ctx.fillRect(0,0,w,h); break; }
+     case 'space': { ctx.fillStyle='#080814'; ctx.fillRect(0,0,w,h); const rad=(cx,cy,r,c)=>{ const rg=ctx.createRadialGradient(cx,cy,0,cx,cy,r); rg.addColorStop(0,c); rg.addColorStop(1,'rgba(0,0,0,0)'); return rg; }; ctx.fillStyle=rad(-0.1*w,-0.1*h, Math.max(w,h)*0.8, 'rgba(126,87,194,0.35)'); ctx.fillRect(0,0,w,h); ctx.fillStyle=rad(1.2*w,0.2*h, Math.max(w,h)*0.6, 'rgba(0,188,212,0.25)'); ctx.fillRect(0,0,w,h); ctx.fillStyle='rgba(255,255,255,0.9)'; for(let i=0;i<140;i++){ const x=(i*73.1)%w, y=(i*97.3)%h; const r=(i%4===0?1.4:(i%4===1?1.1:0.8)); ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fill(); } break; }
+     case 'underwater': { const g=ctx.createLinearGradient(0,0,0,h); g.addColorStop(0,'#0e81b4'); g.addColorStop(1,'#0b597a'); ctx.fillStyle=g; ctx.fillRect(0,0,w,h); ctx.save(); ctx.globalAlpha=0.08; ctx.fillStyle='#ffffff'; for(let i=0;i<8;i++){ const cx=(i*123.4+t*40)%w; const cy=(i*77.7)%h*0.6; const r=200+(i%3)*120; ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.fill(); } ctx.restore(); break; }
+     case 'lava': { const g=ctx.createLinearGradient(0,0,0,h); g.addColorStop(0,'#5b0e0e'); g.addColorStop(0.5,'#f24d0d'); g.addColorStop(1,'#360101'); ctx.fillStyle=g; ctx.fillRect(0,0,w,h); break; }
+     case 'stadium': { const g=ctx.createLinearGradient(0,0,0,h); g.addColorStop(0,'#064d1e'); g.addColorStop(1,'#0a7d33'); ctx.fillStyle=g; ctx.fillRect(0,0,w,h); ctx.save(); ctx.globalAlpha=0.35; ctx.fillStyle='#0f8d3c'; const stripe=28; for(let i=-w;i<w*2;i+=stripe*2){ ctx.beginPath(); ctx.moveTo(i,0); ctx.lineTo(i+stripe,h); ctx.lineTo(i+stripe*2,h); ctx.lineTo(i+stripe,0); ctx.closePath(); ctx.fill(); } ctx.restore(); break; }
+     default: { const g=ctx.createLinearGradient(0,0,0,h); g.addColorStop(0,'#0b0c0f'); g.addColorStop(1,'#161514'); ctx.fillStyle=g; ctx.fillRect(0,0,w,h); }
+   }
+ }
+function draw(){
     const w = canvas.width, h = canvas.height; const scaleX = w / WORLD.w, scaleY = h / WORLD.h; const s = Math.min(scaleX, scaleY);
-    const g = ctx.createLinearGradient(0,0,0,h); g.addColorStop(0,'#0b0c0f'); g.addColorStop(1,'#161514'); ctx.fillStyle = g; ctx.fillRect(0,0,w,h);
+    drawBackground(ctx, w, h);
+
     ctx.save(); ctx.translate((w - WORLD.w * s)/2, (h - WORLD.h * s)/2); ctx.scale(s, s); ctx.translate(0, -camY);
     drawNeonPipes(ctx);
     ctx.save(); ctx.lineWidth=3; ctx.setLineDash([10,8]); neonStroke(ctx, ()=>{ ctx.beginPath(); ctx.moveTo(24, goalY); ctx.lineTo(WORLD.w-24, goalY); ctx.stroke(); }, getAccentColor(), 18); ctx.restore();
@@ -447,9 +465,16 @@ const elGoldDrawer = document.getElementById('gold-drawer');
     const grid = document.createElement('div'); grid.className='na-shop-grid'; body.appendChild(grid);
 
     let kind = 'skins';
-    function setKind(k){ kind = k; [...kindTabs.children].forEach(x=>x.classList.toggle('active', x.dataset.kind===k)); filter='all'; buildRarityTabs(); render(); }
+    function setKind(k){
+  kind = k;
+  [...kindTabs.children].forEach(x=>x.classList.toggle('active', x.dataset.kind===k));
+  filter='all'; buildRarityTabs();
+  if (k==='backgrounds'){ tabs.style.display='none'; } else { tabs.style.display='flex'; }
+  render();
+}
     btnSkins.addEventListener('click', ()=> setKind('skins'));
     btnThemes.addEventListener('click', ()=> setKind('themes'));
+ btnBgs.addEventListener('click', ()=> setKind('backgrounds'));
 
     function render(){ if (kind==='skins') renderShopGrid(grid, { filter, scope:'overlay' }); else renderThemeGrid(grid, { filter }); updateShopGoldBadges(); }
     render();
@@ -492,7 +517,14 @@ const elGoldDrawer = document.getElementById('gold-drawer');
   }
 
   // ----- Themes renderer (NEW) -----
-  function renderThemeGrid(container, { filter='all' }={}){
+  
+ const BG_THUMB_W = 260, BG_THUMB_H = 120;
+ function getBackgroundThumb(id){ const key = STORE.bgThumb + id; try{ const cached = localStorage.getItem(key); if (cached) return cached; }catch{} const cnv=document.createElement('canvas'); cnv.width=BG_THUMB_W; cnv.height=BG_THUMB_H; drawBackgroundPreview(cnv, id); const url=cnv.toDataURL('image/png'); try{ localStorage.setItem(key, url); }catch{} return url; }
+ function getBgOffers(){ const now=Date.now(); let exp=parseInt(localStorage.getItem(STORE.bgOfferExp)||'0',10); let offers={}; const regen=(!exp || now>exp); if (regen){ const ids=BACKGROUNDS.filter(b=>b.price>0).map(b=>b.id); const key=todayKey(); const h=(s)=>{ let h=2166136261>>>0; for(let i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,16777619);} return h>>>0;}; const i1=h(key+'A')%ids.length; let i2=h(key+'B')%ids.length; if(i2===i1) i2=(i2+1)%ids.length; const picks=[ids[i1], ids[i2]]; const dA=20+((h(key+'discA')%21)); const dB=20+((h(key+'discB')%21)); offers={}; picks.forEach((id,i)=>{ const base=BACKGROUNDS.find(x=>x.id===id).price; const disc=(i===0?dA:dB); const price=Math.max(100, Math.round(base*(1-disc/100))); offers[id]={ price, discount:disc }; }); const d=new Date(); d.setHours(24,0,0,0); exp=d.getTime(); try{ localStorage.setItem(STORE.bgOffers, JSON.stringify(offers)); localStorage.setItem(STORE.bgOfferExp, String(exp)); }catch{} } else { try{ offers=JSON.parse(localStorage.getItem(STORE.bgOffers)||'{}'); }catch{ offers={}; } } return { offers, expiresAt: exp }; }
+ function drawBackgroundPreview(cnv, id){ const ctx=cnv.getContext('2d'); const w=cnv.width, h=cnv.height; ctx.clearRect(0,0,w,h); const saved=activeBackground; activeBackground=id; drawBackground(ctx,w,h); activeBackground=saved; }
+ function renderBackgroundGrid(container){ container.innerHTML=''; const {offers}=getBgOffers(); const offerIds=Object.keys(offers); BACKGROUNDS.forEach(bg=>{ const card=document.createElement('div'); card.className='na-card'; card.dataset.bg=bg.id; const rowTop=document.createElement('div'); rowTop.className='na-card-top'; const name=document.createElement('div'); name.className='skin-name'; name.textContent=bg.name; rowTop.appendChild(name); if(offerIds.includes(bg.id)){ const ob=document.createElement('span'); ob.className='na-offer-badge'; ob.textContent='LIMITED'; rowTop.appendChild(ob);} const img=document.createElement('img'); img.className='bg-thumb'; img.alt=bg.name; img.src=getBackgroundThumb(bg.id); const meta=document.createElement('div'); meta.className='na-card-meta'; const priceEl=document.createElement('div'); priceEl.className='price'; const deal=offers[bg.id]; const eff=deal? deal.price : bg.price; priceEl.innerHTML = deal? `<s>🪙 ${bg.price}</s> 🪙 ${eff} (−${deal.discount}%)` : `🪙 ${eff}`; meta.appendChild(priceEl); const acts=document.createElement('div'); acts.className='na-actions'; const btnBuy=document.createElement('button'); btnBuy.className='btn'; btnBuy.textContent='Buy'; const btnApply=document.createElement('button'); btnApply.className='btn'; btnApply.textContent='Apply'; acts.appendChild(btnBuy); acts.appendChild(btnApply); card.appendChild(rowTop); card.appendChild(img); card.appendChild(meta); card.appendChild(acts); container.appendChild(card); const owned=backgroundInventory.includes(bg.id); const current=activeBackground===bg.id; btnBuy.style.display = owned? 'none':''; btnApply.style.display = owned? '':'none'; btnApply.disabled = !owned || current; if (!owned && gold < eff) btnBuy.classList.add('disabled'); btnBuy.addEventListener('click', ()=>{ if (gold >= eff){ gold -= eff; saveGold(); updateGoldUI(); backgroundInventory.push(bg.id); saveBackgroundInventory(); btnBuy.style.display='none'; btnApply.style.display=''; btnApply.disabled=false; SFX.coin && SFX.coin(); } }); btnApply.addEventListener('click', ()=>{ if (!backgroundInventory.includes(bg.id)) return; applyBackground(bg.id); applyBodyBackgroundClass && applyBodyBackgroundClass(bg.id); SFX.equip && SFX.equip(); container.querySelectorAll('.na-card').forEach(c=>{ const eqBtn=c.querySelector('.na-actions .btn:last-child'); const id=c.dataset.bg; if (eqBtn) eqBtn.disabled = (id===activeBackground); }); }); }); }
+ function applyBackground(id){ activeBackground=id; saveBackground(id); }
+function renderThemeGrid(container, { filter='all' }={}){
     container.innerHTML='';
     const themes = THEMES.filter(t=> filter==='all' ? true : (t.rarity===filter));
     themes.forEach(theme=>{
@@ -676,8 +708,7 @@ const elGoldDrawer = document.getElementById('gold-drawer');
   function loadLifetimeGold(){ try{ return parseInt(localStorage.getItem(STORE.lifetime)||'0',10) || 0; }catch{ return 0; } }
   function saveLifetimeGold(){ try{ localStorage.setItem(STORE.lifetime, String(lifetimeGold)); }catch{} }
 
-  function updateGoldUI(){ elGoldHUD && (elGoldHUD.textContent = String(gold)); elGoldTop && (elGoldTop.textContent = String(gold)); elGoldShop && (elGoldShop.textContent = String(gold)); statBal && (statBal.textContent = String(gold)); updateShopGoldBadges(); 
- elGoldDrawer && (elGoldDrawer.textContent = String(gold));}
+  function updateGoldUI(){ elGoldHUD && (elGoldHUD.textContent = String(gold)); elGoldTop && (elGoldTop.textContent = String(gold)); elGoldShop && (elGoldShop.textContent = String(gold)); statBal && (statBal.textContent = String(gold)); updateShopGoldBadges(); }
 
   function loadInventory(){ try{ return JSON.parse(localStorage.getItem(STORE.inv)||'[]'); }catch{ return []; } }
   function saveInventory(){ try{ localStorage.setItem(STORE.inv, JSON.stringify(inventory)); }catch{} }
@@ -706,7 +737,13 @@ const elGoldDrawer = document.getElementById('gold-drawer');
   function clearSave(){ try{ localStorage.removeItem(STORE.save); }catch{} }
   function loadSave(){ try{ const s = localStorage.getItem(STORE.save); return s? JSON.parse(s) : null; }catch{ return null; } }
 
-  // --- Daily gift ---
+  
+ // Background storage
+ function saveBackground(id){ try{ localStorage.setItem(STORE.bg, id); }catch{} }
+ function loadBackground(){ try{ return localStorage.getItem(STORE.bg) || 'sky_day'; }catch{ return 'sky_day'; } }
+ function loadBackgroundInventory(){ try{ return JSON.parse(localStorage.getItem(STORE.bgInv) || '[]'); }catch{ return []; } }
+ function saveBackgroundInventory(){ try{ localStorage.setItem(STORE.bgInv, JSON.stringify(backgroundInventory)); }catch{} }
+// --- Daily gift ---
   function todayKey(){ const d = new Date(); const y=d.getFullYear(); const m=String(d.getMonth()+1).padStart(2,'0'); const day=String(d.getDate()).padStart(2,'0'); return `${y}-${m}-${day}`; }
   function loadDaily(){ try{ return localStorage.getItem(STORE.daily)||''; }catch{ return ''; } }
   function saveDaily(v){ try{ localStorage.setItem(STORE.daily, v); }catch{} }
@@ -728,3 +765,13 @@ const elGoldDrawer = document.getElementById('gold-drawer');
   // ---------- end of IIFE ----------
   console.log('[Neon Ascent] game.js v7.4 loaded OK');
 })();
+
+
+ function applyBodyBackgroundClass(id){
+   const map = { 'sky_day':'bg-sky-day','sky_night':'bg-sky-night','retro_grid':'bg-retro-grid','forest':'bg-forest','space':'bg-space','underwater':'bg-underwater','lava':'bg-lava','stadium':'bg-stadium' };
+   const clsList = Object.values(map);
+   document.body.classList.remove(...clsList);
+   const cls = map[id] || 'bg-sky-day';
+   document.body.classList.add(cls);
+ }
+ const btnBgs = document.createElement('button'); btnBgs.className='na-tab'; btnBgs.textContent='Backgrounds'; btnBgs.dataset.kind='backgrounds'; kindTabs.appendChild(btnBgs);
