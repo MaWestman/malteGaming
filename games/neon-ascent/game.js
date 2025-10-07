@@ -7,7 +7,7 @@
  * - Skins shop unchanged; economy & level difficulty from v7.3c retained
  * ----------------------------------------------------- */
 (() => {
-  console.log('[Neon Ascent] game.js start v7.4');
+  console.log('[Neon Ascent] game.js start v7.4'); console.log('[Neon Ascent] BUILD NA-2025-10-07i (Backgrounds tab injection exact markup)');
 
   // TDZ fix: declare audio before updateMuteButton() can run
   let audio = null;
@@ -53,6 +53,11 @@
   }
 
   const STORE = {
+ bg: 'neonAscent_background',
+ bgInv: 'neonAscent_backgroundInventory',
+ bgOffers: 'neonAscent_bgOffers',
+ bgOfferExp: 'neonAscent_bgOfferExp',
+ bgThumb: 'neonAscent_bgThumb_v1_',
     pb: (lvl)=> `neonAscent_pb_level_${lvl}`,
     theme: 'neonAscent_theme',
     themeInv: 'neonAscent_themeInventory', // NEW: owned themes
@@ -100,6 +105,19 @@
     { id:'nebulon',   name:'Nebulon',     unlock:45, rarity:'legendary', price:70000, accent:'#7af9ff', accent2:'#b48bff' }
   ];
 
+ // --- Backgrounds catalog
+ const BACKGROUNDS = [
+   { id:'sky_day',    name:'Sky — Day',     price:1500 },
+   { id:'sky_night',  name:'Sky — Night',   price:1800 },
+   { id:'retro_grid', name:'Retro Grid',    price:2200 },
+   { id:'forest',     name:'Forest',        price:2000 },
+   { id:'space',      name:'Space Nebula',  price:2600 },
+   { id:'underwater', name:'Underwater',    price:2100 },
+   { id:'lava',       name:'Lava Cave',     price:2400 },
+   { id:'stadium',    name:'Stadium Grass', price:1900 },
+ ];
+
+
   // Skins (repriced for new economy) — unchanged
   const SKINS = [
     { id:'default',  name:'Default Neon',     price:0,     rarity:'common',    unlockLevel:1,  body:'#303136', visor:'#2cf9ff', stripe:'#ff3df2' },
@@ -141,6 +159,9 @@
 
   let inventory = loadInventory(); if (!inventory.includes('default')) inventory.push('default');
   let themeInventory = loadThemeInventory(); if (!themeInventory.includes('cyan')) themeInventory.push('cyan'); // ensure starter theme
+ let backgroundInventory = loadBackgroundInventory(); if (!backgroundInventory.includes('sky_day')) backgroundInventory.push('sky_day');
+ let activeBackground = loadBackground() || 'sky_day';
+
 
   let equippedSkinId = loadSkin() || 'default';
   let bestLevel = loadBestLevel();
@@ -344,7 +365,25 @@
   }
 
   // -------- Draw --------
-  function draw(){
+  
+ function drawBackground(ctx, w, h){
+   ctx.clearRect(0,0,w,h);
+   const t = performance.now()*0.001;
+   const g = ctx.createLinearGradient(0,0,0,h); g.addColorStop(0,'#0b0c0f'); g.addColorStop(1,'#161514'); ctx.fillStyle=g; ctx.fillRect(0,0,w,h);
+   if (typeof activeBackground==='string'){
+     switch(activeBackground){
+       case 'sky_day': { const g=ctx.createLinearGradient(0,0,0,h); g.addColorStop(0,'#87CEFA'); g.addColorStop(1,'#E0FFFF'); ctx.fillStyle=g; ctx.fillRect(0,0,w,h); break; }
+       case 'sky_night': { ctx.fillStyle='#0a0d2b'; ctx.fillRect(0,0,w,h); ctx.fillStyle='rgba(255,255,255,0.85)'; for(let i=0;i<100;i++){ const x=(i*127.1)%w, y=(i*311.7)%h; ctx.fillRect(x,y,1.2,1.2); } break; }
+       case 'retro_grid': { const g=ctx.createLinearGradient(0,0,0,h); g.addColorStop(0,'#1a002b'); g.addColorStop(1,'#080816'); ctx.fillStyle=g; ctx.fillRect(0,0,w,h); ctx.strokeStyle='rgba(255,0,153,0.35)'; const spacing=40; const off=(t*20)%spacing; for(let y=h*0.6;y<h;y+=spacing){ ctx.beginPath(); ctx.moveTo(0,y+off); ctx.lineTo(w,y+off); ctx.stroke(); } break; }
+       case 'forest': { const g=ctx.createLinearGradient(0,0,0,h); g.addColorStop(0,'#0b3d0b'); g.addColorStop(1,'#0c2b0c'); ctx.fillStyle=g; ctx.fillRect(0,0,w,h); break; }
+       case 'space': { ctx.fillStyle='#080814'; ctx.fillRect(0,0,w,h); ctx.fillStyle='rgba(255,255,255,0.9)'; for(let i=0;i<120;i++){ const x=(i*73.1)%w, y=(i*97.3)%h; ctx.fillRect(x,y,1,1); } break; }
+       case 'underwater': { const g=ctx.createLinearGradient(0,0,0,h); g.addColorStop(0,'#0e81b4'); g.addColorStop(1,'#0b597a'); ctx.fillStyle=g; ctx.fillRect(0,0,w,h); break; }
+       case 'lava': { const g=ctx.createLinearGradient(0,0,0,h); g.addColorStop(0,'#5b0e0e'); g.addColorStop(0.5,'#f24d0d'); g.addColorStop(1,'#360101'); ctx.fillStyle=g; ctx.fillRect(0,0,w,h); break; }
+       case 'stadium': { const g=ctx.createLinearGradient(0,0,0,h); g.addColorStop(0,'#064d1e'); g.addColorStop(1,'#0a7d33'); ctx.fillStyle=g; ctx.fillRect(0,0,w,h); break; }
+     }
+   }
+ }
+function draw(){
     const w = canvas.width, h = canvas.height; const scaleX = w / WORLD.w, scaleY = h / WORLD.h; const s = Math.min(scaleX, scaleY);
     const g = ctx.createLinearGradient(0,0,0,h); g.addColorStop(0,'#0b0c0f'); g.addColorStop(1,'#161514'); ctx.fillStyle = g; ctx.fillRect(0,0,w,h);
     ctx.save(); ctx.translate((w - WORLD.w * s)/2, (h - WORLD.h * s)/2); ctx.scale(s, s); ctx.translate(0, -camY);
@@ -411,6 +450,7 @@
     const btnSkins = document.createElement('button'); btnSkins.className='na-tab active'; btnSkins.textContent='Skins'; btnSkins.dataset.kind='skins';
     const btnThemes= document.createElement('button'); btnThemes.className='na-tab';          btnThemes.textContent='Themes'; btnThemes.dataset.kind='themes';
     kindTabs.appendChild(btnSkins); kindTabs.appendChild(btnThemes); body.appendChild(kindTabs);
+  kindTabs.insertAdjacentHTML('beforeend', '<button class="na-tab" data-kind="backgrounds">Backgrounds</button>'); const btnBgs = kindTabs.querySelector('[data-kind="backgrounds"]');
 
     // header row with gold
     const head = document.createElement('div'); head.style.display='flex'; head.style.gap='12px'; head.style.alignItems='center'; head.style.marginBottom='10px';
@@ -426,11 +466,12 @@
     const grid = document.createElement('div'); grid.className='na-shop-grid'; body.appendChild(grid);
 
     let kind = 'skins';
-    function setKind(k){ kind = k; [...kindTabs.children].forEach(x=>x.classList.toggle('active', x.dataset.kind===k)); filter='all'; buildRarityTabs(); render(); }
+    function setKind(k){ kind = k; [...kindTabs.children].forEach(x=>x.classList.toggle('active', x.dataset.kind===k)); filter='all'; buildRarityTabs(); if (k==='backgrounds'){ tabs.style.display='none'; } else { tabs.style.display='flex'; } render(); }
     btnSkins.addEventListener('click', ()=> setKind('skins'));
     btnThemes.addEventListener('click', ()=> setKind('themes'));
+    btnBgs.addEventListener('click', ()=> setKind('backgrounds'));// NEW TAB
 
-    function render(){ if (kind==='skins') renderShopGrid(grid, { filter, scope:'overlay' }); else renderThemeGrid(grid, { filter }); updateShopGoldBadges(); }
+    function render(){ if (kind==='skins') renderShopGrid(grid, { filter, scope:'overlay' }); else if (kind==='themes') renderThemeGrid(grid, { filter }); else renderBackgroundGrid(grid); updateShopGoldBadges(); }
     render();
 
     openModal('modal-shop');
@@ -471,7 +512,14 @@
   }
 
   // ----- Themes renderer (NEW) -----
-  function renderThemeGrid(container, { filter='all' }={}){
+  
+ const BG_THUMB_W = 260, BG_THUMB_H = 120;
+ function getBackgroundThumb(id){ const key = STORE.bgThumb + id; try{ const cached = localStorage.getItem(key); if (cached) return cached; }catch{} const cnv=document.createElement('canvas'); cnv.width=BG_THUMB_W; cnv.height=BG_THUMB_H; drawBackgroundPreview(cnv, id); const url=cnv.toDataURL('image/png'); try{ localStorage.setItem(key, url); }catch{} return url; }
+ function todayKey(){ const d=new Date(); const m=String(d.getMonth()+1).padStart(2,'0'); const day=String(d.getDate()).padStart(2,'0'); return d.getFullYear()+"-"+m+"-"+day; }
+ function getBgOffers(){ const now=Date.now(); let exp=parseInt(localStorage.getItem(STORE.bgOfferExp)||'0',10); let offers={}; const regen=(!exp || now>exp); if (regen){ const ids=BACKGROUNDS.filter(b=>b.price>0).map(b=>b.id); const key=todayKey(); const h=(s)=>{ let h=2166136261>>>0; for(let i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,16777619);} return h>>>0;}; const i1=h(key+'A')%ids.length; let i2=h(key+'B')%ids.length; if(i2===i1) i2=(i2+1)%ids.length; const picks=[ids[i1], ids[i2]]; const dA=20+((h(key+'discA')%21)); const dB=20+((h(key+'discB')%21)); offers={}; picks.forEach((id,i)=>{ const base=BACKGROUNDS.find(x=>x.id===id).price; const disc=(i===0?dA:dB); const price=Math.max(100, Math.round(base*(1-disc/100))); offers[id]={ price, discount:disc }; }); const d=new Date(); d.setHours(24,0,0,0); exp=d.getTime(); try{ localStorage.setItem(STORE.bgOffers, JSON.stringify(offers)); localStorage.setItem(STORE.bgOfferExp, String(exp)); }catch{} } else { try{ offers=JSON.parse(localStorage.getItem(STORE.bgOffers)||'{}'); }catch{ offers={}; } } return { offers, expiresAt: exp }; }
+ function drawBackgroundPreview(cnv, id){ const ctx=cnv.getContext('2d'); const w=cnv.width, h=cnv.height; const saved=activeBackground||'sky_day'; activeBackground=id; drawBackground(ctx,w,h); activeBackground=saved; }
+ function renderBackgroundGrid(container){ container.innerHTML=''; const {offers}=getBgOffers(); const offerIds=Object.keys(offers); BACKGROUNDS.forEach(bg=>{ const card=document.createElement('div'); card.className='na-card'; card.dataset.bg=bg.id; const rowTop=document.createElement('div'); rowTop.className='na-card-top'; const name=document.createElement('div'); name.className='skin-name'; name.textContent=bg.name; rowTop.appendChild(name); if(offerIds.includes(bg.id)){ const ob=document.createElement('span'); ob.className='na-offer-badge'; ob.textContent='LIMITED'; rowTop.appendChild(ob);} const img=document.createElement('img'); img.className='bg-thumb'; img.alt=bg.name; img.src=getBackgroundThumb(bg.id); const meta=document.createElement('div'); meta.className='na-card-meta'; const priceEl=document.createElement('div'); priceEl.className='price'; const deal=offers[bg.id]; const eff=deal? deal.price : bg.price; priceEl.innerHTML = deal? `<s>🪙 ${bg.price}</s> 🪙 ${eff} (−${deal.discount}%)` : `🪙 ${eff}`; meta.appendChild(priceEl); const acts=document.createElement('div'); acts.className='na-actions'; const btnBuy=document.createElement('button'); btnBuy.className='btn'; btnBuy.textContent='Buy'; const btnApply=document.createElement('button'); btnApply.className='btn'; btnApply.textContent='Apply'; acts.appendChild(btnBuy); acts.appendChild(btnApply); card.appendChild(rowTop); card.appendChild(img); card.appendChild(meta); card.appendChild(acts); container.appendChild(card); const owned=backgroundInventory.includes(bg.id); const current=activeBackground===bg.id; btnBuy.style.display = owned? 'none':''; btnApply.style.display = owned? '':'none'; btnApply.disabled = !owned || current; if (!owned && gold < eff) btnBuy.classList.add('disabled'); btnBuy.addEventListener('click', ()=>{ if (gold >= eff){ gold -= eff; saveGold(); updateGoldUI(); backgroundInventory.push(bg.id); saveBackgroundInventory(); btnBuy.style.display='none'; btnApply.style.display=''; btnApply.disabled=false; if (window.SFX && SFX.coin) SFX.coin(); } }); btnApply.addEventListener('click', ()=>{ if (!backgroundInventory.includes(bg.id)) return; applyBackground(bg.id); applyBodyBackgroundClass && applyBodyBackgroundClass(bg.id); if (window.SFX && SFX.equip) SFX.equip(); container.querySelectorAll('.na-card').forEach(c=>{ const eqBtn=c.querySelector('.na-actions .btn:last-child'); const id=c.dataset.bg; if (eqBtn) eqBtn.disabled = (id===activeBackground); }); }); }); }
+function renderThemeGrid(container, { filter='all' }={}){
     container.innerHTML='';
     const themes = THEMES.filter(t=> filter==='all' ? true : (t.rarity===filter));
     themes.forEach(theme=>{
@@ -689,7 +737,13 @@
   function loadDaily(){ try{ return localStorage.getItem(STORE.daily)||''; }catch{ return ''; } }
   function saveDaily(v){ try{ localStorage.setItem(STORE.daily, v); }catch{} }
   function canClaimDaily(){ const last = loadDaily(); return last !== todayKey(); }
-  function tryClaimDailyGift(){ if (!canClaimDaily()) return; addGold(DAILY_GIFT_AMOUNT, { levelEarning:false }); saveDaily(todayKey()); flashStatus(`🎁 Daily gift: +${DAILY_GIFT_AMOUNT} gold!`); SFX.coin(); refreshGiftButton(); updateStatsUI(); }
+  
+ // --- Background storage
+ function saveBackground(id){ try{ localStorage.setItem(STORE.bg, id); }catch{} }
+ function loadBackground(){ try{ return localStorage.getItem(STORE.bg) || 'sky_day'; }catch{ return 'sky_day'; } }
+ function loadBackgroundInventory(){ try{ return JSON.parse(localStorage.getItem(STORE.bgInv) || '[]'); }catch{ return []; } }
+ function saveBackgroundInventory(){ try{ localStorage.setItem(STORE.bgInv, JSON.stringify(backgroundInventory)); }catch{} }
+function tryClaimDailyGift(){ if (!canClaimDaily()) return; addGold(DAILY_GIFT_AMOUNT, { levelEarning:false }); saveDaily(todayKey()); flashStatus(`🎁 Daily gift: +${DAILY_GIFT_AMOUNT} gold!`); SFX.coin(); refreshGiftButton(); updateStatsUI(); }
   function refreshGiftButton(){ if (!giftBtn) return; const ok = canClaimDaily(); giftBtn.disabled = !ok; giftBtn.title = ok ? `Claim +${DAILY_GIFT_AMOUNT} gold` : 'Come back tomorrow for another gift'; }
 
   function updateBoosterHUD(){ if (!elBooster || !elBooster.parentNode) return; elBooster.textContent = boosterJumps>0 ? `🚀 Booster: ${boosterJumps} jump${boosterJumps>1?'s':''} left` : ''; }
