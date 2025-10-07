@@ -7,7 +7,7 @@
  * - Skins shop unchanged; economy & level difficulty from v7.3c retained
  * ----------------------------------------------------- */
 (() => {
-  console.log('[Neon Ascent] game.js start v7.4'); console.log('[Neon Ascent] BUILD NA-2025-10-07e (skins integrated)');
+  console.log('[Neon Ascent] game.js start v7.4'); console.log('[Neon Ascent] BUILD NA-2025-10-07g (shape skins + fx)');
 
   // TDZ fix: declare audio before updateMuteButton() can run
   let audio = null;
@@ -119,12 +119,12 @@
     { id:'cascade',  name:'Cascade Reactor',  price:90000, rarity:'legendary', unlockLevel:28, body:'#0a0b0e', visor:'#66ffcc', stripe:'#b48bff' },
     { id:'thunder',  name:'Thunder Vortex',   price:98000, rarity:'legendary', unlockLevel:32, body:'#0b0c10', visor:'#7af9ff', stripe:'#ff3df2' }
   
-  , { id:'minibyte', name:'Mini Byte', price:12000, rarity:'rare', unlockLevel:6,  body:'#27303a', visor:'#8af5ff', stripe:'#2cf9ff', scale:0.88, shape:'rect' }
-  , { id:'tallnova', name:'Tall Nova', price:16000, rarity:'rare', unlockLevel:7,  body:'#1a1d2b', visor:'#ff7ae6', stripe:'#ffd36d', size:{w:40,h:64}, shape:'rect' }
-  , { id:'chonk',    name:'Chonk Driver', price:22000, rarity:'epic', unlockLevel:10, body:'#2b1a1a', visor:'#ffd36d', stripe:'#7af9ff', size:{w:54,h:50}, shape:'rect' }
-  , { id:'orbix',    name:'Orbix', price:26000, rarity:'epic', unlockLevel:12, body:'#10151e', visor:'#2cf9ff', stripe:'#ff3df2', scale:1.0, shape:'orb' }
-  , { id:'capsula',  name:'Capsula', price:34000, rarity:'epic', unlockLevel:14, body:'#121922', visor:'#8ac6ff', stripe:'#00ffaa', size:{w:42,h:60}, shape:'capsule' }
-  , { id:'triad',    name:'Triad', price:42000, rarity:'legendary', unlockLevel:18, body:'#131313', visor:'#ffe66d', stripe:'#ff7ae6', scale:0.95, shape:'tri' }
+  , { id:'ufo_flux',       name:'UFO Flux',       price:36000, rarity:'epic',      unlockLevel:12, body:'#1b1e2a', visor:'#8af5ff', stripe:'#b48bff', shape:'ufo',      hasUnderglow:true, hasTrail:true }
+  , { id:'ufo_aurora',     name:'UFO Aurora',     price:52000, rarity:'legendary', unlockLevel:16, body:'#121426', visor:'#ffd36d', stripe:'#7af9ff', shape:'ufo',      hasUnderglow:true, hasTrail:true }
+  , { id:'jetpack_rush',   name:'Jetpack Rush',   price:32000, rarity:'epic',      unlockLevel:11, body:'#151a24', visor:'#7af9ff', stripe:'#ff7ae6', shape:'jetpack', size:{w:40,h:64}, hasSparks:true, hasTrail:true }
+  , { id:'jetpack_stellar',name:'Jetpack Stellar',price:48000, rarity:'legendary', unlockLevel:15, body:'#0f1420', visor:'#ffe66d', stripe:'#2cf9ff', shape:'jetpack', size:{w:40,h:64}, hasSparks:true, hasTrail:true }
+  , { id:'spider_neon',    name:'Spider Neon',    price:34000, rarity:'epic',      unlockLevel:13, body:'#191919', visor:'#8af5ff', stripe:'#ff3df2', shape:'spider',  size:{w:56,h:54}, hasLegs:true, hasTrail:true }
+  , { id:'spider_spectre', name:'Spider Spectre', price:50000, rarity:'legendary', unlockLevel:17, body:'#0e0e14', visor:'#ffd36d', stripe:'#8ac6ff', shape:'spider',  size:{w:56,h:54}, hasLegs:true, hasTrail:true }
 ];
 
   // --- Deterministic 100 levels (harder/dynamic from v7.3c) ---
@@ -312,6 +312,8 @@
 
   // -------- Update --------
   function update(dt){
+  fxUpdate(dt);
+
     levelTime += dt; elLevelTime && (elLevelTime.textContent = formatTime(levelTime)); elTotalTime && (elTotalTime.textContent = formatTime(totalTime));
 
     const accel = (input.left? -1:0) + (input.right? 1:0); player.vx += accel * MOVE_ACCEL * dt; if (accel === 0 && player.onGround) player.vx *= FRICTION_GROUND; player.vx = clamp(player.vx, -MAX_SPEED_X, MAX_SPEED_X);
@@ -352,6 +354,14 @@
 
   // -------- Draw --------
   function draw(){
+  fxDraw(ctx);
+
+
+// === Cosmetic FX (trails & sparks) ===
+const FX = { list: [] };
+function fxSpawn(p){ FX.list.push(p); }
+function fxUpdate(dt){ const a = FX.list; for (let i=a.length-1; i>=0; i--){ const p=a[i]; p.life -= dt; if (p.life<=0){ a.splice(i,1); continue; } p.x += p.vx*dt; p.y += p.vy*dt; p.vx *= 0.98; p.vy += (p.gravity||0)*dt; } }
+function fxDraw(ctx){ const a = FX.list; for (let i=0;i<a.length;i++){ const p=a[i]; const t=Math.max(0, Math.min(1, p.life/p.max)); ctx.globalAlpha=(p.alpha||1)*t; ctx.fillStyle=p.color||'rgba(255,255,255,0.9)'; if(p.kind==='circle'){ ctx.beginPath(); ctx.arc(p.x,p.y,p.r||2,0,Math.PI*2); ctx.fill(); } else { ctx.fillRect(p.x,p.y,p.w||2,p.h||2); } ctx.globalAlpha=1; } }
     const w = canvas.width, h = canvas.height; const scaleX = w / WORLD.w, scaleY = h / WORLD.h; const s = Math.min(scaleX, scaleY);
     const g = ctx.createLinearGradient(0,0,0,h); g.addColorStop(0,'#0b0c0f'); g.addColorStop(1,'#161514'); ctx.fillStyle = g; ctx.fillRect(0,0,w,h);
     ctx.save(); ctx.translate((w - WORLD.w * s)/2, (h - WORLD.h * s)/2); ctx.scale(s, s); ctx.translate(0, -camY);
@@ -384,24 +394,34 @@
     const oldW = player.w, oldH = player.h;
     const feetY = player.y + oldH;
     player.w = dims.w; player.h = dims.h;
-    player.x += (oldW - dims.w) * 0.5;
+    player.x += player.x += (oldW - dims.w) * 0.5;
+
+  { const s=currentSkin(); const speed=Math.hypot(player.vx||0, player.vy||0); if (s && s.hasTrail && speed>120){ fxSpawn({ kind:'circle', x: player.x + player.w/2, y: player.y + player.h*0.9, vx: -(player.vx||0)*0.05 + (Math.random()-0.5)*20, vy: (player.vy||0)*-0.02, life:0.35, max:0.35, r: 2+Math.random()*2, color: getAccent2Color(), alpha:0.9 }); } }
     player.y = feetY - dims.h;
     if (player.x < 0) player.x = 0; if (player.x + player.w > WORLD.w) player.x = WORLD.w - player.w;
   }catch(e){} }
 
   function drawPlayer(ctx, pl){ const skin = currentSkin(); const x=pl.x, y=pl.y, w=pl.w, h=pl.h; const now = performance.now()*0.004; const pulse=(Math.sin(now*3)+1)/2; const visorColor = (skin.rarity==='legendary' && pulse>0.5)? getAccentColor(): (skin.visor||'#7af9ff'); const stripeColor = (skin.rarity==='legendary' && pulse>0.5)? getAccentColor(): (skin.stripe||'#ffe66d'); const shape = skin.shape||'rect';
   ctx.save(); ctx.fillStyle=skin.body||'#303136';
-  if (shape==='orb'){ const r=Math.min(w,h)/2; const cx=x+w/2, cy=y+h/2; neonFill(ctx, ()=>{ ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.fill(); }, getAccent2Color(), 10);
-    neonFill(ctx, ()=>{ roundRect(ctx, cx - r*0.7, cy - r*0.2, r*1.4, r*0.4, r*0.2); ctx.fillStyle=visorColor; ctx.globalAlpha=skin.rarity==='legendary'?(0.7+0.3*pulse):1; ctx.fill(); }, visorColor, skin.rarity==='legendary'? 18:10);
-    neonFill(ctx, ()=>{ roundRect(ctx, cx - r*0.6, cy + r*0.4, r*1.2, r*0.22, r*0.11); ctx.fillStyle=stripeColor; ctx.globalAlpha=skin.rarity==='legendary'?(0.65+0.35*pulse):1; ctx.fill(); }, stripeColor, skin.rarity==='legendary'? 16:8); }
-  else if (shape==='capsule'){ const rad=Math.min(w/2, h/2); roundRect(ctx, x, y, w, h, rad); ctx.fill();
-    neonFill(ctx, ()=>{ roundRect(ctx, x+w*0.15, y+h*0.18, w*0.7, h*0.26, h*0.12); ctx.fillStyle=visorColor; ctx.globalAlpha=skin.rarity==='legendary'?(0.7+0.3*pulse):1; ctx.fill(); }, visorColor, skin.rarity==='legendary'? 22:14);
-    neonFill(ctx, ()=>{ roundRect(ctx, x+w*0.2, y+h*0.82 - h*0.1, w*0.6, h*0.1, h*0.05); ctx.fillStyle=stripeColor; ctx.globalAlpha=skin.rarity==='legendary'?(0.65+0.35*pulse):1; ctx.fill(); }, stripeColor, skin.rarity==='legendary'? 18:10); }
-  else if (shape==='tri'){ neonFill(ctx, ()=>{ ctx.beginPath(); ctx.moveTo(x+w/2, y); ctx.lineTo(x+w, y+h); ctx.lineTo(x, y+h); ctx.closePath(); ctx.fill(); }, getAccent2Color(), 10);
-    neonFill(ctx, ()=>{ roundRect(ctx, x + w*0.25, y + h*0.45, w*0.5, h*0.18, h*0.08); ctx.fillStyle=visorColor; ctx.globalAlpha=skin.rarity==='legendary'?(0.7+0.3*pulse):1; ctx.fill(); }, visorColor, skin.rarity==='legendary'? 18:10); }
-  else { roundRect(ctx,x,y,w,h,10); ctx.fill();
-    neonFill(ctx, ()=>{ roundRect(ctx, x+8, y+10, w-16, 16, 8); ctx.fillStyle=visorColor; ctx.globalAlpha=skin.rarity==='legendary'?(0.7+0.3*pulse):1; ctx.fill(); }, visorColor, skin.rarity==='legendary'? 22:18);
-    neonFill(ctx, ()=>{ roundRect(ctx, x + w*0.15, y + h - 12, w*0.7, 6, 3); ctx.fillStyle=stripeColor; ctx.globalAlpha=skin.rarity==='legendary'?(0.65+0.35*pulse):1; ctx.fill(); }, stripeColor, skin.rarity==='legendary'? 18:10); }
+  if (shape==='ufo'){
+    const rY = Math.min(w,h)*0.22, rX = Math.min(w,h)*0.48; const cx=x+w/2, cy=y+h*0.52;
+    if (skin.hasUnderglow){ ctx.save(); ctx.globalAlpha = 0.18 + 0.18*Math.sin(performance.now()*0.008); ctx.fillStyle = getAccent2Color(); ctx.beginPath(); ctx.ellipse(cx, y+h*0.95, rX*1.2, rY*0.9, 0, 0, Math.PI*2); ctx.fill(); ctx.restore(); }
+    neonFill(ctx, ()=>{ ctx.beginPath(); ctx.ellipse(cx, cy, rX, rY, 0, 0, Math.PI*2); ctx.fill(); }, getAccent2Color(), 12);
+    neonFill(ctx, ()=>{ roundRect(ctx, cx - rX*0.55, cy - rY*0.8, rX*1.1, rY*0.6, rY*0.25); ctx.fillStyle=visorColor; ctx.globalAlpha=skin.rarity==='legendary'?(0.7+0.3*pulse):1; ctx.fill(); }, visorColor, skin.rarity==='legendary'? 18:10);
+  } else if (shape==='jetpack'){
+    roundRect(ctx, x, y, w, h, 10); ctx.fill();
+    neonFill(ctx, ()=>{ roundRect(ctx, x+8, y+10, w-16, 16, 8); ctx.fillStyle=visorColor; ctx.globalAlpha=skin.rarity==='legendary'?(0.7+0.3*pulse):1; ctx.fill(); }, visorColor, skin.rarity==='legendary'?22:18);
+    neonFill(ctx, ()=>{ roundRect(ctx, x-6, y+h*0.32, 10, h*0.42, 5); ctx.fillStyle=stripeColor; ctx.fill(); roundRect(ctx, x+w-4, y+h*0.32, 10, h*0.42, 5); ctx.fill(); }, stripeColor, 12);
+    if (skin.hasSparks && pl.vy < -60){ const flame=(ox)=>{ neonFill(ctx, ()=>{ ctx.beginPath(); ctx.moveTo(ox, y+h*0.76); ctx.quadraticCurveTo(ox+4, y+h*0.95, ox, y+h*1.1); ctx.quadraticCurveTo(ox-4, y+h*0.95, ox, y+h*0.76); ctx.fillStyle = getAccent2Color(); ctx.fill(); }, getAccent2Color(), 10); }; flame(x-1); flame(x+w+1); }
+  } else if (shape==='spider'){
+    roundRect(ctx, x, y, w, h, 8); ctx.fill();
+    neonFill(ctx, ()=>{ roundRect(ctx, x+w*0.18, y+h*0.18, w*0.64, h*0.28, h*0.12); ctx.fillStyle=visorColor; ctx.globalAlpha=skin.rarity==='legendary'?(0.7+0.3*pulse):1; ctx.fill(); }, visorColor, skin.rarity==='legendary'?18:12);
+    if (skin.hasLegs){ const t = performance.now()*0.005; const bob = Math.sin(t)*2; ctx.lineWidth=2; ctx.strokeStyle=getAccent2Color(); const leg=(lx,dir)=>{ ctx.beginPath(); ctx.moveTo(lx, y+h*0.7); ctx.lineTo(lx+dir*8, y+h*0.82+bob); ctx.lineTo(lx+dir*14, y+h*0.94-bob); ctx.stroke(); }; ctx.save(); ctx.shadowBlur=8; ctx.shadowColor=getAccent2Color(); leg(x+6, -1); leg(x+14,-1); leg(x+w-6, 1); leg(x+w-14,1); ctx.restore(); }
+  } else {
+    roundRect(ctx,x,y,w,h,10); ctx.fill();
+    neonFill(ctx, ()=>{ roundRect(ctx, x+8, y+10, w-16, 16, 8); ctx.fillStyle = visorColor; ctx.globalAlpha = skin.rarity==='legendary'? (0.7 + 0.3*pulse) : 1; ctx.fill(); }, visorColor, skin.rarity==='legendary'? 22:18);
+  }
+  if (shape!=='ufo'){ neonFill(ctx, ()=>{ roundRect(ctx, x + w*0.15, y + h - 12, w*0.7, 6, 3); ctx.fillStyle = stripeColor; ctx.globalAlpha = skin.rarity==='legendary'? (0.65 + 0.35*pulse) : 1; ctx.fill(); }, stripeColor, skin.rarity==='legendary'? 18:10); }
   ctx.restore(); }
 
   function drawNeonPipes(ctx){ ctx.save(); ctx.globalAlpha=.18; for (let i=0;i<6;i++){ const x=(i+1)*WORLD.w/7; const color = i%3===0? getAccentColor(): (i%3===1? getAccent2Color(): '#ffe66d'); neonStroke(ctx, ()=>{ ctx.beginPath(); ctx.moveTo(x, camY - 200); ctx.lineTo(x, camY + WORLD.h + 300); ctx.lineWidth=2; ctx.strokeStyle=color; ctx.stroke(); }, color, 22); } ctx.restore(); }
@@ -547,7 +567,7 @@
     });
   }
 
-  function drawSkinPreview(cnv, skin, t){ const c2 = cnv.getContext('2d'); const phase = parseFloat(cnv.dataset.phase||'0'); const time = (t||0)/1000 + phase; const bob = Math.sin(time*2.0) * 6; c2.clearRect(0,0,cnv.width, cnv.height); const grd = c2.createLinearGradient(0,0,0,cnv.height); grd.addColorStop(0, 'rgba(15,16,18,0.7)'); grd.addColorStop(1, 'rgba(10,11,13,0.5)'); c2.fillStyle = grd; c2.fillRect(0,0,cnv.width, cnv.height); c2.fillStyle='#242325'; c2.strokeStyle='rgba(255,255,255,0.05)'; c2.lineWidth=1.2; roundRect(c2, 16, 86, 200, 16, 6); c2.fill(); c2.stroke(); const px = 76, py = 56 + bob; const dims=getSkinDims(skin); const w=dims.w, h=dims.h; c2.fillStyle=skin.body; if ((skin.shape||'rect')==='orb'){ const r=Math.min(w,h)/2; const cx=px+w/2, cy=py+h/2; c2.beginPath(); c2.arc(cx, cy, r, 0, Math.PI*2); c2.fill(); } else { roundRect(c2, px, py, w, h, (skin.shape==='capsule'? Math.min(w/2,h/2):10)); c2.fill(); } const now = (t||0)/1000; const pulse = (Math.sin((now+phase)*3)+1)/2; const accent = getAccentColor(); const visorCol = (skin.rarity==='legendary' && pulse>0.5) ? accent : skin.visor; const stripeCol = (skin.rarity==='legendary' && pulse>0.5) ? accent : skin.stripe; neonFill(c2, ()=>{ if ((skin.shape||'rect')==='orb'){ const r=Math.min(w,h)/2; const cx=px+w/2, cy=py+h/2; roundRect(c2, cx - r*0.7, cy - r*0.2, r*1.4, r*0.4, r*0.2); } else { roundRect(c2, px+8, py+10, w-16, 16, 8); } c2.fillStyle=visorCol; c2.globalAlpha = skin.rarity==='legendary'? (0.7+0.3*pulse):1; c2.fill(); }, visorCol, skin.rarity==='legendary'? 18:10); neonFill(c2, ()=>{ roundRect(c2, px + w*0.15, py + h - 12, w*0.7, 6, 3); c2.fillStyle=stripeCol; c2.globalAlpha = skin.rarity==='legendary'? (0.65+0.35*pulse):1; c2.fill(); }, stripeCol, skin.rarity==='legendary'? 16:8); requestAnimationFrame((t2)=>{ if (document.body.contains(cnv)) drawSkinPreview(cnv, skin, t2); }); }
+  function drawSkinPreview(cnv, skin, t){ const c2 = cnv.getContext('2d'); const phase = parseFloat(cnv.dataset.phase||'0'); const time = (t||0)/1000 + phase; const bob = Math.sin(time*2.0) * 6; c2.clearRect(0,0,cnv.width, cnv.height); const grd = c2.createLinearGradient(0,0,0,cnv.height); grd.addColorStop(0, 'rgba(15,16,18,0.7)'); grd.addColorStop(1, 'rgba(10,11,13,0.5)'); c2.fillStyle = grd; c2.fillRect(0,0,cnv.width, cnv.height); c2.fillStyle='#242325'; c2.strokeStyle='rgba(255,255,255,0.05)'; c2.lineWidth=1.2; roundRect(c2, 16, 86, 200, 16, 6); c2.fill(); c2.stroke(); const px = 76, py = 56 + bob, w=44, h=56; c2.fillStyle=skin.body; roundRect(c2, px, py, w, h, 10); c2.fill(); const now = (t||0)/1000; const pulse = (Math.sin((now+phase)*3)+1)/2; const accent = getAccentColor(); const visorCol = (skin.rarity==='legendary' && pulse>0.5) ? accent : skin.visor; const stripeCol = (skin.rarity==='legendary' && pulse>0.5) ? accent : skin.stripe; neonFill(c2, ()=>{ roundRect(c2, px+8, py+10, w-16, 16, 8); c2.fillStyle=visorCol; c2.globalAlpha = skin.rarity==='legendary'? (0.7+0.3*pulse):1; c2.fill(); }, visorCol, skin.rarity==='legendary'? 18:10); neonFill(c2, ()=>{ roundRect(c2, px + w*0.15, py + h - 12, w*0.7, 6, 3); c2.fillStyle=stripeCol; c2.globalAlpha = skin.rarity==='legendary'? (0.65+0.35*pulse):1; c2.fill(); }, stripeCol, skin.rarity==='legendary'? 16:8); requestAnimationFrame((t2)=>{ if (document.body.contains(cnv)) drawSkinPreview(cnv, skin, t2); }); }
 
   function drawThemePreview(cnv, theme, t){ const c2 = cnv.getContext('2d'); c2.clearRect(0,0,cnv.width, cnv.height); const g1 = c2.createLinearGradient(0,0,cnv.width,0); g1.addColorStop(0, theme.accent); g1.addColorStop(1, theme.accent2); c2.fillStyle = 'rgba(15,16,18,0.8)'; c2.fillRect(0,0,cnv.width, cnv.height); // pipes preview
     const mid = cnv.height/2; c2.lineWidth=3; c2.strokeStyle=theme.accent; c2.shadowColor=theme.accent; c2.shadowBlur=12; c2.beginPath(); c2.moveTo(20, mid-18); c2.lineTo(cnv.width-20, mid-18); c2.stroke(); c2.strokeStyle=theme.accent2; c2.shadowColor=theme.accent2; c2.beginPath(); c2.moveTo(20, mid+18); c2.lineTo(cnv.width-20, mid+18); c2.stroke(); // tag
@@ -581,7 +601,6 @@
     const L = LEVELS[level-1]; platforms = [];
     const startPlat = { x: L.start.x, y: L.start.y, w: L.start.w, h:16, type:'static', phase:0 }; platforms.push(startPlat);
     player.x = clamp(startPlat.x + (startPlat.w - player.w)/2, 0, WORLD.w - player.w); player.y = startPlat.y - player.h - 1; player.vx=0; player.vy=0; player.onGround=false; player.coyoteTime=0; player.jumpBuffer=0;
-  applySkinMetrics(currentSkin());
     levelTime = 0; elLevelTime && (elLevelTime.textContent = formatTime(0)); goldThisLevel = 0; comboClimbThisAir = 0; bestComboThisLevel = 0;
     for (const p of L.platforms){ if (p.type==='moving') platforms.push({ x:p.x, y:p.y, w:p.w, h:p.h||16, type:'moving', range:p.range||60, _origX:p._origX ?? p.x, phase:p.phase||0, spd:p.spd||1.0 }); else platforms.push({ x:p.x, y:p.y, w:p.w, h:p.h||16, type:'static', phase:0 }); }
     boosters = []; for (const bp of (L.boosters||[])){ boosters.push({ x: bp.x, y: bp.y, w: 20, h: 20, taken:false, vyBonus: L.boostVyBonus }); }
