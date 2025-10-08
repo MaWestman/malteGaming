@@ -551,16 +551,5 @@
   restart();
   requestAnimationFrame(loop);
 
-  // --- Folding menu toggle (mobile friendly) ---
-(() => {
-  const hud = document.querySelector('.hud');
-  const menuBtn = document.getElementById('btnMenu');
-  function setCollapsed(collapsed){
-    if (!hud || !menuBtn) return;
-    hud.classList.toggle('is-collapsed', collapsed);
-    menuBtn.setAttribute('aria-expanded', String(!collapsed));
-  }
-  // Default collapsed on mobile
-  if (window.matchMedia && window.matchMedia('(max-width: 900px)').matches) setCollapsed(true);
-  if (menuBtn){ menuBtn.addEventListener('click', () => setCollapsed(hud.classList.contains('is-collapsed') ? false : true)); }
+  
 })();
