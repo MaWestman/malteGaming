@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>Upward Jump Game — v5.2</title>
+  <title>Game — WGAF</title>
   <link rel="stylesheet" href="game.css" />
 </head>
 <body>
@@ -19,7 +19,7 @@
 
       <!-- Mobile menubar -->
       <div class="mobile-bar" role="navigation" aria-label="Mobile game menu">
-        <a class="btn ghost" href="./">⟵ Back</a>
+        <a class="btn ghost" href="./">⟵ Home</a>
         <a class="btn ghost" href="shop.html">Shop</a>
         <a class="btn ghost" href="stats.html">Stats</a>
         <button id="btnPause" class="btn" aria-label="Pause or resume">Pause</button>
@@ -29,12 +29,12 @@
 
       <!-- Touch controls -->
       <div class="touchpad">
-        <button id="btnLeft"  class="round" aria-label="Move left">◀</button>
+        <button id="btnLeft"  class="round" aria-label="Left">◀</button>
         <button id="btnJump"  class="round main" aria-label="Jump" title="Jump">⤒</button>
-        <button id="btnRight" class="round" aria-label="Move right">▶</button>
+        <button id="btnRight" class="round" aria-label="Right">▶</button>
       </div>
 
-      <!-- Start/Retry overlay -->
+      <!-- Start/Retry overlay (visible & clickable) -->
       <div id="levelOverlay" class="level-overlay" aria-live="polite">
         <button id="levelAction" class="level-btn">Start Level 1</button>
       </div>

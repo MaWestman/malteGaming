@@ -1,38 +1,26 @@
-<!doctype html><html lang='en'><head><meta charset='utf-8'>
-<meta name='viewport' content='width=device-width, initial-scale=1'>
-<title>Maltes Gamingsida! — v5.2</title>
-<link rel='stylesheet' href='site.css'>
-<style>
-.top{position:sticky;top:0;z-index:50;background:rgba(0,0,0,.25);backdrop-filter:blur(6px)}
-.nav{max-width:1000px;margin:0 auto;padding:10px 16px;display:flex;justify-content:space-between;align-items:center;gap:12px}
-.home{min-height:calc(100vh - 56px);display:grid;place-items:center;gap:16px;text-align:center;padding:24px 16px}
-.btn{display:inline-block;padding:12px 18px;border-radius:12px;border:2px solid #2a4570;color:#e6edf3;text-decoration:none;font-weight:800}
-.primary{background:#7cd1f9;color:#051322;border:0}
-.btn+.btn{margin-left:10px}
-@media (max-width:480px){.btn{display:block;margin:8px auto 0;width:260px;max-width:90vw}.btn+.btn{margin-left:0}}
-</style>
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>WGAF — v5.2.5</title>
+  <link rel="stylesheet" href="site.css" />
 </head>
 <body>
-<header class='top'>
-  <nav class='nav'>
-    <a class='brand' href='./' style='color:#e6edf3;text-decoration:none;font-weight:900'>🕹️ Maltes <span style='color:#7cd1f9'>Gamingsida!</span></a>
-    <div class='links'>
-      <a href='game.html' class='btn'>Play</a>
-      <a href='shop.html' class='btn'>Shop</a>
-      <a href='stats.html' class='btn'>Stats</a>
-    </div>
-  </nav>
-</header>
-<main class='home'>
-  <div>
-    <h1>Maltes Gamingsida! <small style='font-size:.5em;opacity:.7'>v5.2</small></h1>
-    <p class='sub'>100 levels • Themes & Backgrounds • Skins • Accessories • Stats</p>
-    <p>
-      <a href='game.html' class='btn primary'>Play the Game</a>
-      <a href='shop.html' class='btn'>Shop</a>
-      <a href='stats.html' class='btn'>Stats</a>
-    </p>
-    <p class='foot'>© 2025 Malte · Built with fun ✨</p>
-  </div>
-</main>
-</body></html>
+  <main class="landing">
+    <header class="brand-block" role="banner">
+      <div class="logo">🕹️</div>
+      <h1 class="brand">WGAF</h1>
+      <p class="tag">Where gaming and football meet!</p>
+    </header>
+
+    <nav class="cta" aria-label="Main">
+      <a class="btn primary" href="game.html">Play</a>
+      <a class="btn" href="shop.html">Shop</a>
+      <a class="btn" href="stats.html">Stats</a>
+    </nav>
+  </main>
+  <footer class="foot">© 2025 WGAF</footer>
+</body>
+</html>
