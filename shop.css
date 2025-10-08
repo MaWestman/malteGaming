@@ -8,12 +8,12 @@ html,body{height:100%;margin:0;background:var(--bg);color:var(--fg);font-family:
 .shop-header .bar{display:flex;align-items:center;justify-content:space-between;gap:12px;max-width:1100px;margin:0 auto;padding:12px 16px}
 .wallet{background:#172b47;border:1px solid #22436f;padding:6px 10px;border-radius:8px;font-weight:800}
 .shop{max-width:1100px;margin:0 auto;padding:12px 16px}
-.tabs{display:flex;gap:8px;margin:8px 0 16px}
+.tabs{display:flex;gap:8px;margin:8px 0 16px;flex-wrap:wrap}
 .tab{background:#173153;border:2px solid #22436f;color:var(--fg);padding:8px 12px;border-radius:10px;font-weight:700;cursor:pointer}
 .tab.active{background:#22436f}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px}
 .card{background:#12243f;border:1px solid #1e3a63;border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.25);padding:10px;display:flex;flex-direction:column;gap:8px}
-.card .preview{height:120px;border-radius:10px;border:2px solid #1e3a63;background:#0f1a2b;display:grid;place-items:center;color:#fff;font-weight:900}
+.card .preview{height:130px;border-radius:10px;border:2px solid #1e3a63;background:#0f1a2b;display:grid;place-items:center;color:#fff;font-weight:900;font-size:28px}
 .card .meta{display:flex;align-items:center;justify-content:space-between}
 .card .name{font-weight:800}
 .rarity{font-weight:800}
@@ -22,6 +22,6 @@ html,body{height:100%;margin:0;background:var(--bg);color:var(--fg);font-family:
 .rarity.epic{color:var(--epic)}
 .rarity.legendary{color:var(--legendary)}
 .actions{display:flex;justify-content:flex-end}
-/* Simple visual flags for rarity */
 .card.legendary{box-shadow:0 0 0 2px rgba(244,197,66,.4), 0 10px 30px rgba(0,0,0,.35)}
 .card.epic{box-shadow:0 0 0 2px rgba(192,132,252,.35), 0 10px 30px rgba(0,0,0,.35)}
+.lock{font-size:12px;opacity:.9;margin-right:auto;color:#ffd166}

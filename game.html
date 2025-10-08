@@ -4,39 +4,42 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>Upward Jump Game</title>
+  <title>Upward Jump Game — v5</title>
   <link rel="stylesheet" href="game.css" />
 </head>
 <body>
   <main>
     <h1 class="sr-only">Upward Jump Game</h1>
-
     <div class="stage">
       <canvas id="game" width="800" height="450" aria-label="Jumping game canvas" role="img"></canvas>
 
-      <!-- Folding HUD (overlay) -->
       <div class="hud" role="toolbar" aria-label="Game controls">
-        <a class="btn ghost" href="./">⟵ Back</a>
-        <a class="btn ghost" href="shop.html">Shop</a>
-        <button id="btnStart" aria-label="Start game">Start</button>
-        <button id="btnPause" aria-label="Pause or resume">Pause</button>
-        <button id="btnRestart" aria-label="Restart game">Restart</button>
-        <label class="mute"><input type="checkbox" id="mute" /> Mute</label>
         <div class="score" aria-live="polite">Level: <span id="level">1</span> · Height: <span id="score">0</span> · Best: <span id="hiscore">0</span></div>
       </div>
 
-      <!-- Hamburger to toggle HUD on mobile -->
-      <button id="btnMenu" class="menu-toggle" aria-label="Toggle menu" aria-expanded="true">☰</button>
+      <!-- Mobile menubar (auto-hides during play) -->
+      <div class="mobile-bar" role="navigation" aria-label="Mobile game menu">
+        <a class="btn ghost" href="./">⟵ Back</a>
+        <a class="btn ghost" href="shop.html">Shop</a>
+        <a class="btn ghost" href="stats.html">Stats</a>
+        <button id="btnPause" class="btn" aria-label="Pause or resume">Pause</button>
+        <label class="mute"><input type="checkbox" id="mute" /> Mute</label>
+        <button id="btnRestart" class="btn" aria-label="Restart level">Restart</button>
+      </div>
 
-      <!-- Touch controls close to canvas -->
+      <!-- Touch controls -->
       <div class="touchpad">
         <button id="btnLeft"  class="round" aria-label="Move left">◀</button>
         <button id="btnJump"  class="round main" aria-label="Jump" title="Jump">⤒</button>
         <button id="btnRight" class="round" aria-label="Move right">▶</button>
       </div>
+
+      <!-- Start/Retry overlay -->
+      <div id="levelOverlay" class="level-overlay" aria-live="polite">
+        <button id="levelAction" class="level-btn">Start Level 1</button>
+      </div>
     </div>
   </main>
-
   <script src="game.js"></script>
 </body>
 </html>
