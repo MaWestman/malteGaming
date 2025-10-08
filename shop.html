@@ -1,0 +1,46 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Shop — Maltes Gamingsida!</title>
+  <link rel="stylesheet" href="shop.css" />
+</head>
+<body>
+  <header class="shop-header">
+    <nav class="bar">
+      <a class="btn ghost" href="./">⟵ Back</a>
+      <h1>Shop</h1>
+      <div class="wallet" title="Your points">Points: <span id="wallet">0</span></div>
+    </nav>
+  </header>
+
+  <main class="shop">
+    <div class="tabs" role="tablist">
+      <button class="tab active" data-tab="themes" role="tab">Themes</button>
+      <button class="tab" data-tab="skins" role="tab">Skins</button>
+      <button class="tab" data-tab="backgrounds" role="tab">Backgrounds</button>
+    </div>
+
+    <section id="grid" class="grid" aria-live="polite"></section>
+
+    <p class="hint">Animated skins use sprite sheets (idle/run/jump). Buy & equip, then play.</p>
+  </main>
+
+  <template id="item-card">
+    <article class="card">
+      <div class="preview"></div>
+      <div class="meta">
+        <div class="name"></div>
+        <div class="rarity"></div>
+      </div>
+      <div class="actions">
+        <button class="btn buy"></button>
+      </div>
+    </article>
+  </template>
+
+  <script src="shop.js"></script>
+</body>
+</html>

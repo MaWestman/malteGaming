@@ -1,0 +1,34 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Upward Jump Game</title>
+  <link rel="stylesheet" href="game.css" />
+</head>
+<body>
+  <main>
+    <h1 class="sr-only">Upward Jump Game</h1>
+    <canvas id="game" width="800" height="450" aria-label="Jumping game canvas" role="img"></canvas>
+
+    <div class="hud" role="toolbar" aria-label="Game controls">
+      <a class="btn ghost" href="./">⟵ Back</a>
+      <a class="btn ghost" href="shop.html">Shop</a>
+      <button id="btnStart" aria-label="Start game">Start</button>
+      <button id="btnPause" aria-label="Pause or resume">Pause</button>
+      <button id="btnRestart" aria-label="Restart game">Restart</button>
+      <label class="mute"><input type="checkbox" id="mute" /> Mute</label>
+      <div class="score" aria-live="polite">Height: <span id="score">0</span> · Best: <span id="hiscore">0</span></div>
+    </div>
+
+    <div class="touchpad">
+      <button id="btnLeft"  class="round" aria-label="Move left">◀</button>
+      <button id="btnJump"  class="round main" aria-label="Jump" title="Jump">⤒</button>
+      <button id="btnRight" class="round" aria-label="Move right">▶</button>
+    </div>
+  </main>
+
+  <script src="game.js"></script>
+</body>
+</html>
