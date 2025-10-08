@@ -1,0 +1,1 @@
+Put your sprite images here (PNG/SVG). The game currently uses simple shapes.

@@ -1,0 +1,24 @@
+
+:root {
+  --bg: #0e1726;
+  --panel: #1b2a41;
+  --panel2: #223a5e;
+  --accent: #7cd1f9;
+  --fg: #e6edf3;
+  --ok: #7de07d;
+  --warn: #ffb86b;
+  --bad: #ff6b6b;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; background: var(--bg); color: var(--fg); font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+main { display: grid; place-items: center; height: 100%; gap: 12px; padding: 12px; }
+canvas { background: var(--panel); width: min(96vw, 960px); height: auto; border: 2px solid var(--panel2); border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,.35); }
+.hud { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: center; }
+button, label.mute { background: var(--panel2); color: var(--fg); padding: 8px 12px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; }
+button:hover { filter: brightness(1.1); }
+.score { padding: 6px 10px; background: #172335; border-radius: 8px; font-weight: 700; }
+.sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); border: 0; }
+
+/* Mobile on-screen jump button */
+.jump { position: fixed; right: 18px; bottom: 18px; width: 70px; height: 70px; border-radius: 50%; background: var(--accent); color: #031423; border: none; box-shadow: 0 8px 20px rgba(0,0,0,.35); font-weight: 800; letter-spacing: .5px; }
+@media (min-width: 900px) { .jump { width: 64px; height: 64px; } }

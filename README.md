@@ -1,22 +1,28 @@
-# Maltes Gamingsida! — 2D Jump Game
 
-A cheerful 2D runner built with **HTML5 Canvas** and **vanilla JavaScript**. Now with **double jump**, **patrolling enemies** (stomp to defeat), coins, spikes, scoring, and a playful animated landing page.
+# 2D Jump Game (Vanilla JS)
 
-## Project
-```
-/ (Landing page: index.html)
-├─ index.html    # fun, animated landing page
-├─ site.css
-├─ game.html     # the game
-├─ game.css
-├─ game.js
-└─ assets/
-   ├─ audio/ (jump.wav, coin.wav, hit.wav)
-   └─ images/ (favicon.svg placeholder)
-```
+A lightweight, kid‑friendly 2D jumping runner built with **HTML5 Canvas** and **vanilla JavaScript**. Works on desktop and mobile (tap to jump, on‑screen Jump button). No frameworks or build step.
 
-## Run locally
-- Open `index.html` directly, or run a static server:
+## Features
+- Canvas 2D with HiDPI scaling
+- Player jump physics (gravity, max fall)
+- Infinite platforms with fair spacing
+- Coins (+50) and spikes (game over)
+- Distance‑based score + high score in `localStorage`
+- States: menu, playing, paused, gameover
+- Start / Pause / Restart buttons
+- Mute toggle and basic SFX placeholders
+
+## Getting started
+
+### 1) Download & unzip
+Download the ZIP, unzip, and open the folder.
+
+### 2) Run locally (static server)
+Open `index.html` directly works in most browsers, but for a smoother experience use a small static server:
+
+- **VS Code**: Install *Live Server* extension → Right‑click `index.html` → **Open with Live Server**.
+- **Node** (any terminal):
   ```bash
   npx serve -l 5173
   # or
@@ -24,16 +30,19 @@ A cheerful 2D runner built with **HTML5 Canvas** and **vanilla JavaScript**. Now
   ```
   Then open http://localhost:5173
 
-## Controls
-- **Jump**: Space / W / ↑ / Tap / on‑screen **Jump** button
-- **Double jump**: Press jump again mid‑air (enabled by default)
-- **Pause**: Pause button (also auto‑pauses on tab change)
+### 3) Controls
+- **Jump**: Space / W / ArrowUp / Tap / on‑screen **Jump** button
+- **Pause**: Pause button (or browser tab change pauses automatically)
 - **Restart**: Restart button
 
-## Notes
-- High score is saved in `localStorage`.
-- Tweak physics and difficulty at the top of `game.js`.
-- To disable double jump, set `ALLOW_DOUBLE_JUMP = false` in `game.js`.
+### 4) Deploy
+- **GitHub Pages**: Push this folder to a repo → Settings → Pages → Deploy from *main* → `/`.
+- **Netlify/Vercel**: Drag‑and‑drop the folder in the dashboard.
 
-## Deploy
-- Static‑host anywhere: GitHub Pages, Netlify, Vercel. No build step or CORS issues.
+## Customization
+- Tweak gameplay in `game.js` top constants (gravity, jump velocity, scroll speed, spawn sizes).
+- Replace rectangle art with sprites in `draw()` (hooks are commented for player/platform drawing).
+- Add more hazards or a double jump (see TODO comments in code).
+
+## License
+You are free to use and modify this project for personal or educational use.
