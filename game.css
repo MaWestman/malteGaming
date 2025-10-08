@@ -15,9 +15,7 @@ button, .btn, label.mute { background:#223a5e; color:var(--fg); padding:8px 12px
 .touchpad { position:absolute; left:50%; bottom: 12px; transform: translateX(-50%); display:flex; justify-content:center; gap:12px; pointer-events:auto; z-index:4; }
 .round { width: 64px; height: 64px; border-radius: 50%; background:#1d3557; color:#cfe8ff; border:2px solid #254a7a; box-shadow:0 8px 20px rgba(0,0,0,.35); font-weight:800; font-size:22px; }
 .round.main { background: var(--accent); color:#041428; }
-/* Overlay visible on top and clickable */
 .level-overlay { position:absolute; inset:0; display:grid; place-items:center; z-index:30; pointer-events:auto; }
 .level-overlay.hidden { display:none; }
 .level-btn { font-size:clamp(18px, 4vw, 26px); padding:14px 22px; border-radius:14px; background:linear-gradient(90deg,#7cd1f9,#ffd166); color:#041428; font-weight:900; border:none; box-shadow:0 12px 30px rgba(0,0,0,.35); cursor:pointer; }
 .level-btn:active { transform: translateY(1px); }
-@media (max-width: 900px) { .touchpad { bottom: 10px; gap: 10px; } .round { width: 56px; height: 56px; font-size:20px; } }
