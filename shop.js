@@ -7,7 +7,7 @@
   const tabs = document.querySelectorAll('.tab');
   const tmpl = document.getElementById('item-card');
 
-  const PRICES = { common:200, rare:500, epic:1000, legendary:2500 };
+  const PRICES = { common:200, rare:600, epic:1200, legendary:3000 };
   const CATALOG = {
     themes: [
       { id:'theme-default', name:'Default', rarity:'common', preview:{platform:'#5e81ac',bg:'#0f1a2b'} },
@@ -16,11 +16,29 @@
       { id:'theme-aurora',  name:'Aurora', rarity:'legendary', preview:{platform:'#7de07d',bg:'#06141f'} },
     ],
     skins: [
-      { id:'skin-default', name:'Blue Buddy', rarity:'common', preview:{player:'#7cd1f9'}, sprite:false },
-      { id:'skin-forest',  name:'Forest', rarity:'rare', preview:{player:'#7de07d'}, sprite:false },
-      { id:'skin-sunset',  name:'Sunset', rarity:'rare', preview:{player:'#ff8e72'}, sprite:false },
-      { id:'skin-neon',    name:'Neon (Animated)', rarity:'epic', preview:{player:'#00f5d4'}, sprite:true },
-      { id:'skin-royal',   name:'Royal (Animated)', rarity:'legendary', preview:{player:'#ffd166'}, sprite:true },
+      // Commons — simpler colors, low FX
+      { id:'skin-default',    name:'Blue Buddy',     rarity:'common',    preview:{player:'#7cd1f9'}, sprite:true },
+      { id:'skin-bubblegum',  name:'Bubblegum',      rarity:'common',    preview:{player:'#ff7ab6'}, sprite:true },
+      { id:'skin-lime',       name:'Lime Pop',       rarity:'common',    preview:{player:'#78ff6b'}, sprite:true },
+
+      // Rares — bolder colors/patterns
+      { id:'skin-camo',       name:'Camo',          rarity:'rare',      preview:{player:'#6da86b'}, sprite:true },
+      { id:'skin-tiger',      name:'Tiger Stripes', rarity:'rare',      preview:{player:'#ff9e2f'}, sprite:true },
+      { id:'skin-zebra',      name:'Zebra',         rarity:'rare',      preview:{player:'#ffffff'}, sprite:true },
+
+      // Epics — neon/gradient
+      { id:'skin-vapor',      name:'Vaporwave',     rarity:'epic',      preview:{player:'#00f5d4'}, sprite:true },
+      { id:'skin-ember',      name:'Ember',         rarity:'epic',      preview:{player:'#ff5a3c'}, sprite:true },
+      { id:'skin-icy',        name:'Icy',           rarity:'epic',      preview:{player:'#9ad7ff'}, sprite:true },
+
+      // Legendaries — wild FX
+      { id:'skin-galaxy',     name:'Galaxy',        rarity:'legendary', preview:{player:'#a78bfa'}, sprite:true },
+      { id:'skin-glitch',     name:'Glitch',        rarity:'legendary', preview:{player:'#ff00aa'}, sprite:true },
+      { id:'skin-holo',       name:'Holo Prism',    rarity:'legendary', preview:{player:'#b3ffe6'}, sprite:true },
+
+      // Existing animated examples & flags
+      { id:'skin-neon',       name:'Neon (Animated)',   rarity:'epic',       preview:{player:'#00f5d4'}, sprite:true },
+      { id:'skin-royal',      name:'Royal (Animated)',  rarity:'legendary',  preview:{player:'#ffd166'}, sprite:true },
       { id:'flag-se', name:'Sweden (Animated)', rarity:'rare', preview:{flag:'se'}, sprite:true },
       { id:'flag-no', name:'Norway (Animated)', rarity:'epic', preview:{flag:'no'}, sprite:true },
       { id:'flag-dk', name:'Denmark (Animated)', rarity:'rare', preview:{flag:'dk'}, sprite:true },
@@ -28,10 +46,10 @@
       { id:'flag-is', name:'Iceland (Animated)', rarity:'epic', preview:{flag:'is'}, sprite:true },
     ],
     backgrounds: [
-      { id:'bg-default', name:'Deep Night', rarity:'common', preview:{bg1:'#0f1a2b',bg2:'#162238'} },
-      { id:'bg-forest',  name:'Forest Canopy', rarity:'rare', preview:{bg1:'#0b1f14',bg2:'#143d28'} },
-      { id:'bg-sunset',  name:'Sunset', rarity:'epic', preview:{bg1:'#24122b',bg2:'#5b2542'} },
-      { id:'bg-aurora',  name:'Aurora Sky', rarity:'legendary', preview:{bg1:'#0a0e2a',bg2:'#10385a'} },
+      { id:'bg-default', name:'Deep Night', rarity:'common',   preview:{bg1:'#0f1a2b',bg2:'#162238'} },
+      { id:'bg-forest',  name:'Forest Canopy', rarity:'rare',  preview:{bg1:'#0b1f14',bg2:'#143d28'} },
+      { id:'bg-sunset',  name:'Sunset', rarity:'epic',         preview:{bg1:'#24122b',bg2:'#5b2542'} },
+      { id:'bg-aurora',  name:'Aurora Sky', rarity:'legendary',preview:{bg1:'#0a0e2a',bg2:'#10385a'} },
     ]
   };
 
@@ -72,6 +90,7 @@
       nameEl.textContent = item.name;
       rarityEl.textContent = item.rarity.toUpperCase();
       rarityEl.classList.add('rarity', item.rarity);
+      node.classList.add(item.rarity);
 
       if (type === 'skins') {
         if (item.preview.flag) {

@@ -28,7 +28,7 @@ button:hover, .btn:hover { filter: brightness(1.1); }
 
 /* Mobile tweaks: hide HUD by default; bring controls a tad closer; smaller buttons */
 @media (max-width: 900px) {
-  .hud { display:none; } /* starts collapsed on mobile (menu button toggles it) */
+  .hud { display:none; } /* starts collapsed on mobile */
   .touchpad { bottom: 10px; gap: 10px; }
   .round { width: 56px; height: 56px; font-size:20px; }
   .menu-toggle { width:40px; height:40px; }

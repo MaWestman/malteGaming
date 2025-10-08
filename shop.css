@@ -22,3 +22,6 @@ html,body{height:100%;margin:0;background:var(--bg);color:var(--fg);font-family:
 .rarity.epic{color:var(--epic)}
 .rarity.legendary{color:var(--legendary)}
 .actions{display:flex;justify-content:flex-end}
+/* Simple visual flags for rarity */
+.card.legendary{box-shadow:0 0 0 2px rgba(244,197,66,.4), 0 10px 30px rgba(0,0,0,.35)}
+.card.epic{box-shadow:0 0 0 2px rgba(192,132,252,.35), 0 10px 30px rgba(0,0,0,.35)}
