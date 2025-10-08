@@ -9,7 +9,6 @@
 
   const PRICES = { common:200, rare:600, epic:1200, legendary:3000 };
 
-  // Catalogs — expanded
   const THEMES = [
     { id:'theme-default',  name:'Default',    rarity:'common',   preview:{platform:'#5e81ac',bg:'#0f1a2b'} },
     { id:'theme-heaven',   name:'Heaven',     rarity:'rare',     preview:{platform:'#b3e5ff',bg:'#e6f7ff'} },
@@ -41,20 +40,16 @@
   ];
 
   const SKINS = [
-    // Commons
     { id:'skin-default', name:'Blue Buddy', rarity:'common', preview:{player:'#7cd1f9'}, sprite:true },
     { id:'skin-cloud',   name:'Cloud Puff', rarity:'common', preview:{player:'#e6f7ff'}, sprite:true },
     { id:'skin-sand',    name:'Sandy',      rarity:'common', preview:{player:'#e0b26a'}, sprite:true },
-    // Rares
     { id:'skin-angel',   name:'Angel',      rarity:'rare',   preview:{player:'#b3e5ff'}, sprite:true },
     { id:'skin-demon',   name:'Demon',      rarity:'rare',   preview:{player:'#ff3b30'}, sprite:true },
     { id:'skin-surfer',  name:'Surfer',     rarity:'rare',   preview:{player:'#2ec4ff'}, sprite:true },
-    // Epics
     { id:'skin-astronaut', name:'Astronaut', rarity:'epic',  preview:{player:'#8a7dff'}, sprite:true },
     { id:'skin-martian',   name:'Martian',   rarity:'epic',  preview:{player:'#c1440e'}, sprite:true },
     { id:'skin-ninja',     name:'Ninja',     rarity:'epic',  preview:{player:'#222222'}, sprite:true },
     { id:'skin-wizard',    name:'Wizard',    rarity:'epic',  preview:{player:'#7e57c2'}, sprite:true },
-    // Legendaries
     { id:'skin-robot',     name:'Robot',     rarity:'legendary', preview:{player:'#9ad7ff'}, sprite:true },
     { id:'skin-cyborg',    name:'Cyborg',    rarity:'legendary', preview:{player:'#00ffd1'}, sprite:true },
     { id:'skin-dragon',    name:'Dragon',    rarity:'legendary', preview:{player:'#ff6b00'}, sprite:true },
@@ -62,7 +57,6 @@
   ];
 
   const ACCESSORIES = [
-    // Head
     { id:'head-halo',    name:'Halo',         slot:'head', rarity:'rare',   price:800,  minLevel:10,  preview:'🟡' },
     { id:'head-horns',   name:'Horns',        slot:'head', rarity:'epic',   price:1200, minLevel:15,  preview:'🔻' },
     { id:'head-cap',     name:'Blue Cap',     slot:'head', rarity:'common', price:200,  minLevel:3,   preview:'🧢' },
@@ -72,7 +66,6 @@
     { id:'head-pirate',  name:'Pirate Hat',   slot:'head', rarity:'epic',   price:1200, minLevel:12,  preview:'🏴‍☠️' },
     { id:'head-space',   name:'Space Helmet', slot:'head', rarity:'epic',   price:1500, minLevel:18,  preview:'🪐' },
     { id:'head-mars',    name:'Mars Helmet',  slot:'head', rarity:'epic',   price:1500, minLevel:18,  preview:'🟥' },
-    // Eyes
     { id:'eyes-round',   name:'Round Glasses', slot:'eyes', rarity:'common',    price:300,  minLevel:2,  preview:'👓' },
     { id:'eyes-aviator', name:'Aviators',      slot:'eyes', rarity:'rare',      price:700,  minLevel:7,  preview:'😎' },
     { id:'eyes-visor',   name:'Neon Visor',    slot:'eyes', rarity:'epic',      price:1200, minLevel:12, preview:'🧿' },
