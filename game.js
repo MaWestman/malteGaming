@@ -70,10 +70,29 @@
   function emit(color,x,y,vx,vy,life=0.35,size=3){ parts.push({x,y,vx,vy,life,color,size}); }
   function burst(x,y,color,count=10,spd=220){ for(let i=0;i<count;i++){ const a=Math.random()*Math.PI*2, s=spd*(0.35+Math.random()*0.9); emit(color,x,y,Math.cos(a)*s,Math.sin(a)*s,0.35+Math.random()*0.35,3); } }
 
+  // NEW: always place player on a real platform when (re)starting
+  function placePlayerOnPlatform(){
+    if (!platforms.length) return;
+    // choose the lowest (max y) platform so it's fully visible on start
+    let p = platforms[0];
+    for (const pl of platforms){ if (pl.y > p.y) p = pl; }
+    const xCenter = p.x + (p.w - player.w) * 0.5;
+    player.x = Math.max(p.x, Math.min(p.x + p.w - player.w, xCenter));
+    player.y = p.y - player.h;
+    player.vx = 0; player.vy = 0;
+    player.onGround = true; player.jumpsLeft = ALLOW_DOUBLE ? 2 : 1;
+    player.anim = 'idle'; player.animTime = 0;
+    bestY = player.y; // scoring baseline
+  }
+
   function restart(){ state='menu'; score=0; runPoints=0; pointsEarned=0; cameraY=0; spawnY=H; bestY=player.y;
     Object.assign(player,{ x:W*0.5-20, y:300, vx:0, vy:0, onGround:false, jumpsLeft:ALLOW_DOUBLE?2:1, facing:1, anim:'idle', animTime:0, squashX:1, squashY:1, trailT:0 });
     platforms.length=coins.length=spikes.length=enemies.length=parts.length=0;
-    let y=360; for(let i=0;i<6;i++){ const w=ri(P_W_MIN,P_W_MAX), x=ri(P_MARGIN,W-P_MARGIN-w); platforms.push({x,y,w,h:20}); if(Math.random()<0.5) coins.push({x:x+w*0.5-COIN/2, y:y-32, w:COIN, h:COIN, active:true}); y-=ri(P_GAP_Y_MIN,P_GAP_Y_MAX);} spawnY=y; updUI(); }
+    // seed a few starter platforms (no spikes here for safe spawn)
+    let y=360; for(let i=0;i<6;i++){ const w=ri(P_W_MIN,P_W_MAX), x=ri(P_MARGIN,W-P_MARGIN-w); platforms.push({x,y,w,h:20}); if(Math.random()<0.5) coins.push({x:x+w*0.5-COIN/2, y:y-32, w:COIN, h:COIN, active:true}); y-=ri(P_GAP_Y_MIN,P_GAP_Y_MAX);} spawnY=y;
+    placePlayerOnPlatform();
+    updUI();
+  }
 
   function r(min,max){ return Math.random()*(max-min)+min; } function ri(min,max){ return Math.floor(r(min,max)); }
 
