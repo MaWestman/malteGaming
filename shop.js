@@ -9,7 +9,7 @@
 
   const PRICES = { common:200, rare:600, epic:1200, legendary:3000 };
 
-  // Catalogs — expanded with wild options
+  // Catalogs — expanded
   const THEMES = [
     { id:'theme-default',  name:'Default',    rarity:'common',   preview:{platform:'#5e81ac',bg:'#0f1a2b'} },
     { id:'theme-heaven',   name:'Heaven',     rarity:'rare',     preview:{platform:'#b3e5ff',bg:'#e6f7ff'} },
@@ -61,9 +61,8 @@
     { id:'skin-holo2',     name:'Holo Prism II', rarity:'legendary', preview:{player:'#b3ffe6'}, sprite:true },
   ];
 
-  // Accessories (new): head & eyes, with minLevel unlocks
   const ACCESSORIES = [
-    // Head slot
+    // Head
     { id:'head-halo',    name:'Halo',         slot:'head', rarity:'rare',   price:800,  minLevel:10,  preview:'🟡' },
     { id:'head-horns',   name:'Horns',        slot:'head', rarity:'epic',   price:1200, minLevel:15,  preview:'🔻' },
     { id:'head-cap',     name:'Blue Cap',     slot:'head', rarity:'common', price:200,  minLevel:3,   preview:'🧢' },
@@ -73,7 +72,7 @@
     { id:'head-pirate',  name:'Pirate Hat',   slot:'head', rarity:'epic',   price:1200, minLevel:12,  preview:'🏴‍☠️' },
     { id:'head-space',   name:'Space Helmet', slot:'head', rarity:'epic',   price:1500, minLevel:18,  preview:'🪐' },
     { id:'head-mars',    name:'Mars Helmet',  slot:'head', rarity:'epic',   price:1500, minLevel:18,  preview:'🟥' },
-    // Eyes slot
+    // Eyes
     { id:'eyes-round',   name:'Round Glasses', slot:'eyes', rarity:'common',    price:300,  minLevel:2,  preview:'👓' },
     { id:'eyes-aviator', name:'Aviators',      slot:'eyes', rarity:'rare',      price:700,  minLevel:7,  preview:'😎' },
     { id:'eyes-visor',   name:'Neon Visor',    slot:'eyes', rarity:'epic',      price:1200, minLevel:12, preview:'🧿' },
@@ -90,6 +89,7 @@
   function loadEquipped(){ try { return JSON.parse(localStorage.getItem(K.EQUIPPED)||'{}'); } catch { return {}; } }
   function saveEquipped(e){ localStorage.setItem(K.EQUIPPED, JSON.stringify(e)); }
   function maxLevel(){ return Number(localStorage.getItem(K.MAXLVL)||1); }
+
   function ensureDefaults(){
     const owned = loadOwned(); let changed=false;
     ['theme-default','skin-default','bg-default'].forEach(id=>{ if(!owned.has(id)){ owned.add(id); changed=true; }});
@@ -103,11 +103,9 @@
   }
 
   function updateWalletUI(){ walletEl.textContent = String(loadWallet()); }
-
   function lockBadge(minLvl){ const m=document.createElement('div'); m.className='lock'; m.textContent = `Req LVL ${minLvl}`; return m; }
 
   function render(type){
-    // Special Stats tab
     if (type === 'stats') {
       const sRaw = localStorage.getItem(K.STATS);
       const s = sRaw? JSON.parse(sRaw) : {};
@@ -143,7 +141,7 @@
       rarityEl.classList.add('rarity', item.rarity);
       node.classList.add(item.rarity);
 
-      // Build previews
+      // Preview
       if (type === 'skins') {
         const div = document.createElement('div');
         div.style.width='40px'; div.style.height='52px'; div.style.borderRadius='6px'; div.style.background=item.preview.player; prev.appendChild(div);
@@ -158,14 +156,13 @@
 
       // Equip state
       let isEquipped=false;
+      const eqAcc = (eq.accessories||{head:null,eyes:null});
       if (type === 'themes') isEquipped = (eq.theme === item.id);
       if (type === 'skins') isEquipped = (eq.skin === item.id);
       if (type === 'backgrounds') isEquipped = (eq.background === item.id);
-      if (type === 'accessories') {
-        const slot = item.slot; isEquipped = (eq.accessories && eq.accessories[slot] === item.id);
-      }
+      if (type === 'accessories') isEquipped = (eqAcc[item.slot] === item.id);
 
-      // Ownership and purchase gating (minLevel)
+      // Gating
       const isOwned = owned.has(item.id);
       const minLvl = item.minLevel || 1;
       const meetsLevel = maxLevel() >= minLvl;
@@ -180,16 +177,11 @@
           if (!meetsLevel) return;
           const w = loadWallet(); if (w < price) return;
           saveWallet(w - price); owned.add(item.id); saveOwned(owned);
-          // Auto-equip on purchase
           if (type === 'themes') eq.theme = item.id;
           if (type === 'skins') eq.skin = item.id;
           if (type === 'backgrounds') eq.background = item.id;
-          if (type === 'accessories') {
-            eq.accessories = eq.accessories || { head:null, eyes:null };
-            eq.accessories[item.slot] = item.id;
-          }
-          saveEquipped(eq);
-          updateWalletUI(); render(type);
+          if (type === 'accessories') { eq.accessories = eqAcc; eq.accessories[item.slot] = item.id; }
+          saveEquipped(eq); updateWalletUI(); render(type);
         };
       } else if (!isEquipped) {
         buyBtn.textContent = 'Equip';
@@ -197,10 +189,7 @@
           if (type === 'themes') eq.theme = item.id;
           if (type === 'skins') eq.skin = item.id;
           if (type === 'backgrounds') eq.background = item.id;
-          if (type === 'accessories') {
-            eq.accessories = eq.accessories || { head:null, eyes:null };
-            eq.accessories[item.slot] = item.id;
-          }
+          if (type === 'accessories') { eq.accessories = eqAcc; eq.accessories[item.slot] = item.id; }
           saveEquipped(eq); render(type);
         };
       } else {

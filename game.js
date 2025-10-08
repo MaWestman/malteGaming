@@ -55,7 +55,8 @@
       bg2: bg ? bg.bg2 : theme.bg2,
       para: bg ? bg.para : theme.para,
       enemyTint: theme.platform,
-      accessories: (eq.accessories || { head:null, eyes:null })
+      accessories: (eq.accessories || { head:null, eyes:null }),
+      skin: eq.skin || 'skin-default'
     };
   }
 
@@ -74,7 +75,7 @@
   // Physics & world
   const GRAVITY=2200, JUMP_V=-900, MAX_FALL=1700, MOVE_ACC=2200, MOVE_MAX=360, FRICTION=2000; const ALLOW_DOUBLE=true;
   let P_W_MIN=90, P_W_MAX=180, P_GAP_Y_MIN=70, P_GAP_Y_MAX=130, P_MARGIN=30; const COIN=18;
-  const MAX_LEVEL=100, LEVEL_HEIGHT=250;
+  const MAX_LEVEL=100, LEVEL_HEIGHT=800; // v5.1 longer rounds
 
   // Canvas
   const canvas=document.getElementById('game'); const ctx=canvas.getContext('2d');
@@ -106,7 +107,7 @@
   let state='waiting';
   let last=performance.now(); let hiscore=Number(localStorage.getItem(K.HISCORE)||0); if(hiscoreEl) hiscoreEl.textContent=String(hiscore);
   let cameraY=0, spawnY=H, bestY=0, playerStartY=300; let runPoints=0;
-  let activeLevel=1; let levelProgress=0;
+  let activeLevel=1; let levelProgress=0; // height-only
 
   const player={ x:W*0.5-18, y:280, w:36, h:47, vx:0, vy:0, onGround:false, jumpsLeft:ALLOW_DOUBLE?2:1, facing:1, anim:'idle', animTime:0, squashX:1, squashY:1, trailT:0 };
   const platforms=[], coins=[], spikes=[], enemies=[], parts=[];
@@ -176,20 +177,28 @@
     // anim
     const prev=player.anim; player.anim=!player.onGround ? 'jump' : (Math.abs(player.vx)>30? 'run':'idle'); player.animTime=(player.anim===prev)? (player.animTime+dt) : 0;
 
-    // coins
-    for (const c of coins){ if(!c.active) continue; if(aabb(player,c)){ c.active=false; levelProgress+=50; runPoints+=10; incStat('coins',1); play('coin'); burst(c.x+c.w/2, c.y+c.h/2, '#ffd166', 8, 180); } }
+    // coins (no progress impact)
+    for (const c of coins){ if(!c.active) continue; if(aabb(player,c)){
+      c.active=false; incStat('coins',1); runPoints+=10; play('coin'); burst(c.x+c.w/2, c.y+c.h/2, '#ffd166', 8, 180);
+    } }
 
-    // enemies
+    // enemies (no progress impact on stomp)
     for (const e of enemies){ if(!e.alive) continue; e.anim+=dt; if(e.type==='slime' || e.type==='roller'){ e.x += e.dir*e.speed*dt; if(e.x<e.left){ e.x=e.left; e.dir=1; } if(e.x>e.right){ e.x=e.right; e.dir=-1; } } else if(e.type==='bat'){ e.x+=e.dir*e.speed*dt; if(e.x<e.left){ e.x=e.left; e.dir=1; } if(e.x>e.right){ e.x=e.right; e.dir=-1; } e.t=(e.t||0)+dt*4; e.y += Math.sin(e.t) * 24 * dt * 8; }
       if(aabb(player,e)){
         if(e.type==='roller'){ play('hit'); incStat('deaths',1); return onDeath(); }
         const feet=player.y+player.h; const stompY=e.y+e.h*0.38;
-        if(player.vy>120 && feet - player.vy*dt <= stompY){ e.alive=false; levelProgress+=100; runPoints+=20; incStat('stomps',1); player.vy=JUMP_V*0.7; burst(e.x+e.w/2, e.y+e.h/2, '#f97098', 12, 220); play('coin'); } else { play('hit'); incStat('deaths',1); return onDeath(); }
+        if(player.vy>120 && feet - player.vy*dt <= stompY){ e.alive=false; runPoints+=20; incStat('stomps',1); player.vy=JUMP_V*0.7; burst(e.x+e.w/2, e.y+e.h/2, '#f97098', 12, 220); play('coin'); } else { play('hit'); incStat('deaths',1); return onDeath(); }
       }
     }
 
-    // camera & progress
-    const targetCam=Math.min(cameraY, player.y - H*0.4); cameraY=targetCam; const height = Math.round((playerStartY - Math.min(bestY,player.y))); bestY=Math.min(bestY, player.y); levelProgress = Math.max(levelProgress, height);
+    // camera & progress (height-only)
+    const targetCam=Math.min(cameraY, player.y - H*0.4); cameraY=targetCam;
+    const height = Math.round((playerStartY - Math.min(bestY,player.y)));
+    bestY=Math.min(bestY, player.y);
+    levelProgress = Math.max(levelProgress, height);
+
+    // hiscore display
+    if (height > hiscore){ hiscore = height; localStorage.setItem(K.HISCORE, String(hiscore)); }
 
     // level complete gate
     if(levelProgress >= LEVEL_HEIGHT){ state='waiting'; nextLevel(); return; }
@@ -202,7 +211,7 @@
   }
 
   function onDeath(){ state='waiting'; const earned = Math.floor(levelProgress/5) + runPoints; addPointsToStats(earned); saveWallet(loadWallet()+earned); setOverlay(`Retry Level ${activeLevel}`); resetWorld(); syncUiVisibility(); }
-  function updateHUD(){ if(scoreEl) scoreEl.textContent=String(levelProgress); if(hiscoreEl){ const globalHeight=Number(localStorage.getItem(K.HISCORE)||0); const newHis=Math.max(globalHeight, levelProgress); hiscoreEl.textContent=String(newHis); } if(levelEl) levelEl.textContent=String(activeLevel); }
+  function updateHUD(){ if(scoreEl) scoreEl.textContent=String(levelProgress); if(hiscoreEl) hiscoreEl.textContent=String(Number(localStorage.getItem(K.HISCORE)||0)); if(levelEl) levelEl.textContent=String(activeLevel); }
 
   // Auto-hide menubar during play
   function syncUiVisibility(){ if(!mobileBar) return; const hide = (state==='playing'); mobileBar.classList.toggle('hidden', hide); }
@@ -223,15 +232,11 @@
     const head = accessories.head; const eyes = accessories.eyes; if(!head && !eyes) return;
     const cx=dx+w/2, top=dy+4, headH=h*0.28; const headY = dy + h*0.12; const eyeY = dy + h*0.38;
     ctx.save();
-    // Head gear
     if(head){
       if(head==='head-halo'){
         ctx.strokeStyle='rgba(255,230,120,0.95)'; ctx.lineWidth=3; ctx.beginPath(); ctx.ellipse(cx, top, w*0.28, h*0.06, 0, 0, Math.PI*2); ctx.stroke();
       } else if(head==='head-horns'){
-        ctx.fillStyle='#aa0000';
-        const hornW=w*0.10, hornH=h*0.14;
-        ctx.beginPath(); ctx.moveTo(cx-w*0.18, headY); ctx.lineTo(cx-w*0.18-hornW, headY+hornH); ctx.lineTo(cx-w*0.10, headY+hornH*0.7); ctx.closePath(); ctx.fill();
-        ctx.beginPath(); ctx.moveTo(cx+w*0.18, headY); ctx.lineTo(cx+w*0.18+hornW, headY+hornH); ctx.lineTo(cx+w*0.10, headY+hornH*0.7); ctx.closePath(); ctx.fill();
+        ctx.fillStyle='#aa0000'; const hornW=w*0.10, hornH=h*0.14; ctx.beginPath(); ctx.moveTo(cx-w*0.18, headY); ctx.lineTo(cx-w*0.18-hornW, headY+hornH); ctx.lineTo(cx-w*0.10, headY+hornH*0.7); ctx.closePath(); ctx.fill(); ctx.beginPath(); ctx.moveTo(cx+w*0.18, headY); ctx.lineTo(cx+w*0.18+hornW, headY+hornH); ctx.lineTo(cx+w*0.10, headY+hornH*0.7); ctx.closePath(); ctx.fill();
       } else if(head==='head-cap'){
         ctx.fillStyle='#2a6fff'; ctx.fillRect(cx-w*0.22, headY, w*0.44, headH*0.6); ctx.fillRect(cx-w*0.1, headY+headH*0.5, w*0.28, headH*0.25);
       } else if(head==='head-cowboy'){
@@ -247,7 +252,6 @@
         ctx.strokeStyle=head==='head-space'?'#8a7dff':'#c1440e'; ctx.lineWidth=3; ctx.beginPath(); ctx.ellipse(cx, dy+h*0.34, w*0.34, h*0.36, 0, 0, Math.PI*2); ctx.stroke();
       }
     }
-    // Eyes / glasses
     if(eyes){
       if(eyes==='eyes-round'){
         ctx.strokeStyle='#111'; ctx.lineWidth=3; const r=w*0.08; const gap=w*0.05; ctx.beginPath(); ctx.arc(cx-gap, eyeY, r, 0, Math.PI*2); ctx.arc(cx+gap, eyeY, r, 0, Math.PI*2); ctx.stroke(); ctx.beginPath(); ctx.moveTo(cx-gap+r,eyeY); ctx.lineTo(cx+gap-r,eyeY); ctx.stroke();
@@ -288,12 +292,11 @@
     drawShadow(player.x,player.y,player.w,player.h);
     const dx=player.x, dy=player.y-cameraY; ctx.save(); const cx=dx+player.w/2, cy=dy+player.h/2; ctx.translate(cx,cy); ctx.scale(player.squashX,player.squashY); ctx.translate(-cx,-cy);
     if(skinReady && skinImg){ const def=PLAYER_SPRITE.ANIMS[player.anim]||PLAYER_SPRITE.ANIMS.idle; const fr=Math.floor(player.animTime*def.fps)%def.frames; const sx=fr*PLAYER_SPRITE.FW, sy=def.row*PLAYER_SPRITE.FH; if(player.facing===1){ ctx.drawImage(skinImg, sx,sy,PLAYER_SPRITE.FW,PLAYER_SPRITE.FH, dx,dy, player.w,player.h); } else { ctx.save(); ctx.translate(dx+player.w,dy); ctx.scale(-1,1); ctx.drawImage(skinImg, sx,sy,PLAYER_SPRITE.FW,PLAYER_SPRITE.FH, 0,0, player.w,player.h); ctx.restore(); } } else { ctx.fillStyle='#7cd1f9'; ctx.fillRect(player.x, player.y-cameraY, player.w, player.h); }
-    // draw accessories on top
-    drawAccessories(ctx, dx, dy, player.w, player.h, player.facing, visuals().accessories);
+    drawAccessories(ctx, dx, dy, player.w, player.h, player.facing, V.accessories);
     ctx.restore();
 
     // Two-tone rounded progress bar (screen-space)
-    const p = Math.max(0, Math.min(1, levelProgress / LEVEL_HEIGHT)); const margin = 10, barH = 8, barW = W - margin*2, x = margin, y = 8; drawProgressBar(ctx, x, y, barW, barH, p, visuals().platform);
+    const p = Math.max(0, Math.min(1, levelProgress / LEVEL_HEIGHT)); const margin = 10, barH = 8, barW = W - margin*2, x = margin, y = 8; drawProgressBar(ctx, x, y, barW, barH, p, V.platform);
 
     // Dim when waiting
     if(state==='waiting'){ ctx.fillStyle='rgba(0,0,0,.25)'; ctx.fillRect(0,0,W,H); }
@@ -302,7 +305,7 @@
   function drawShadow(px,py,pw,ph){ let gy=null; for(const p of platforms){ if(px+pw>p.x && px<p.x+p.w && p.y>=py+ph-1){ gy=(gy===null? p.y : Math.min(gy,p.y)); } } if(gy===null) return; const dist=gy-(py+ph); const t=Math.max(0,Math.min(1,1 - dist/220)); const scale=0.6+0.4*t; const alpha=0.15+0.25*t; const cx=px+pw/2, cy=gy + 2 - cameraY; const rw=pw*0.9*scale, rh=8*scale; ctx.save(); ctx.fillStyle=`rgba(0,0,0,${alpha.toFixed(3)})`; ctx.beginPath(); ctx.ellipse(cx,cy,rw/2,rh/2,0,0,Math.PI*2); ctx.fill(); ctx.restore(); }
 
   // Buttons & loop
-  btnPause && (btnPause.onclick=()=>{ if(state==='playing'){ state='paused'; } else if(state==='paused'){ state='playing'; } syncUiVisibility(); });
+  btnPause && (btnPause.onclick=()=>{ if(state==='playing'){ state='paused'; } else if(state==='paused'){ state='playing'; if(typeof hideOverlay==='function') hideOverlay(); } syncUiVisibility(); });
   btnRestart && (btnRestart.onclick=()=>{ startLevel(activeLevel); });
   levelAction && levelAction.addEventListener('click', ()=>{ hideOverlay(); state='playing'; syncUiVisibility(); });
 
