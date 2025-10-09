@@ -16,19 +16,22 @@
   const cssDock=document.createElement('style'); cssDock.textContent='.dock-overlay{position:absolute;inset:0;display:grid;place-items:center;z-index:30}.dock-overlay.hidden{display:none !important}'; document.head.appendChild(cssDock);
   const levelActionDock=document.getElementById('levelActionDock');
 
-  // Fullscreen toggle button
-  const fullBtn=document.createElement('button'); fullBtn.className='full-btn'; fullBtn.id='btnFullscreen'; fullBtn.type='button'; fullBtn.title='Fullscreen'; fullBtn.setAttribute('aria-label','Enter fullscreen'); fullBtn.textContent='⛶'; stage && stage.appendChild(fullBtn);
-  function isFullscreen(){ return !!(document.fullscreenElement||document.webkitFullscreenElement||document.msFullscreenElement); }
-  async function enterFullscreen(){ try{ if(stage.requestFullscreen) await stage.requestFullscreen({navigationUI:'hide'}); else if(stage.webkitRequestFullscreen) stage.webkitRequestFullscreen(); else if(stage.msRequestFullscreen) stage.msRequestFullscreen(); }catch{} }
-  async function exitFullscreen(){ try{ if(document.exitFullscreen) await document.exitFullscreen(); else if(document.webkitExitFullscreen) document.webkitExitFullscreen(); else if(document.msExitFullscreen) document.msExitFullscreen(); }catch{} }
-  function updateFsUI(){ if(isFullscreen()){ fullBtn.textContent='⤢'; fullBtn.title='Exit fullscreen'; fullBtn.setAttribute('aria-label','Exit fullscreen'); } else { fullBtn.textContent='⛶'; fullBtn.title='Fullscreen'; fullBtn.setAttribute('aria-label','Enter fullscreen'); } }
-  fullBtn.addEventListener('click',()=>{ if(isFullscreen()) exitFullscreen(); else enterFullscreen(); });
-  document.addEventListener('fullscreenchange',updateFsUI); document.addEventListener('webkitfullscreenchange',updateFsUI);
+  // Fullscreen toggle button (if previous patch added styles)
+  const existingFS=document.getElementById('btnFullscreen');
+  if(!existingFS){
+    const fullBtn=document.createElement('button'); fullBtn.className='full-btn'; fullBtn.id='btnFullscreen'; fullBtn.type='button'; fullBtn.title='Fullscreen'; fullBtn.setAttribute('aria-label','Enter fullscreen'); fullBtn.textContent='⛶'; stage && stage.appendChild(fullBtn);
+    function isFullscreen(){ return !!(document.fullscreenElement||document.webkitFullscreenElement||document.msFullscreenElement); }
+    async function enterFullscreen(){ try{ if(stage.requestFullscreen) await stage.requestFullscreen({navigationUI:'hide'}); else if(stage.webkitRequestFullscreen) stage.webkitRequestFullscreen(); else if(stage.msRequestFullscreen) stage.msRequestFullscreen(); }catch{} }
+    async function exitFullscreen(){ try{ if(document.exitFullscreen) await document.exitFullscreen(); else if(document.webkitExitFullscreen) document.webkitExitFullscreen(); else if(document.msExitFullscreen) document.msExitFullscreen(); }catch{} }
+    function updateFsUI(){ if(isFullscreen()){ fullBtn.textContent='⤢'; fullBtn.title='Exit fullscreen'; fullBtn.setAttribute('aria-label','Exit fullscreen'); } else { fullBtn.textContent='⛶'; fullBtn.title='Fullscreen'; fullBtn.setAttribute('aria-label','Enter fullscreen'); } }
+    fullBtn.addEventListener('click',()=>{ if(isFullscreen()) exitFullscreen(); else enterFullscreen(); });
+    document.addEventListener('fullscreenchange',updateFsUI); document.addEventListener('webkitfullscreenchange',updateFsUI);
+  }
 
   // SFX
   const sfx={ jump:new Audio('assets/audio/jump.wav'), coin:new Audio('assets/audio/coin.wav'), hit:new Audio('assets/audio/hit.wav'), win:new Audio('assets/audio/win.wav') }; try{ Object.values(sfx).forEach(a=>{a.preload='auto'; a.volume=.28;}); }catch{}
 
-  // Sprites for enemies (if not found, we fall back to rectangles)
+  // Sprites (fallback if missing)
   const imgBat=new Image(); imgBat.src='assets/images/sprites/enemy-bat.png';
   const imgSlime=new Image(); imgSlime.src='assets/images/sprites/enemy-slime.png';
 
@@ -47,8 +50,7 @@
     const animatedBg=new Set(['bg-stars','bg-rainbow','bg-nebula','bg-cosmos','bg-snow']); const starBgs=new Set(['bg-stars','bg-nebula','bg-cosmos']);
     FX.bgAnimated=animatedBg.has(EQ.background); FX.snow=(EQ.background==='bg-snow'||EQ.theme==='theme-winter'); FX.stars=(starBgs.has(EQ.background)||EQ.theme==='theme-space'); FX.pitch=(EQ.background==='bg-pitch'||EQ.theme==='theme-football');
     const skinMap={ 'skin-default':{color:'#7cd1f9',flash:false,flashAlt:'#ffffff'}, 'skin-lime':{color:'#a3f7bf',flash:false}, 'skin-red':{color:'#ff6b6b',flash:false}, 'skin-ice':{color:'#bfe6ff',flash:false}, 'skin-neon-pulse':{color:'#00f5d4',flash:true,flashAlt:'#ffef5a'}, 'skin-royal':{color:'#a78bfa',flash:false}, 'skin-astro':{color:'#50fa7b',flash:true,flashAlt:'#8be9fd'}, 'skin-gold-legend':{color:'#f6c453',flash:true,flashAlt:'#fff1a6'} };
-    SKIN=skinMap[EQ.skin]||skinMap['skin-default'];
-    FX.aura=EQ.accessories?.aura||null; FX.trail=EQ.accessories?.trail||null; FX.head=EQ.accessories?.head||null; FX.eyes=EQ.accessories?.eyes||null;
+    SKIN=skinMap[EQ.skin]||skinMap['skin-default']; FX.aura=EQ.accessories?.aura||null; FX.trail=EQ.accessories?.trail||null; FX.head=EQ.accessories?.head||null; FX.eyes=EQ.accessories?.eyes||null;
   }
   applyEquipped();
 
@@ -127,11 +129,15 @@
 
     player.vy+=GRAVITY*dt; if(player.vy>MAX_FALL) player.vy=MAX_FALL; player.x+=player.vx*dt; player.y+=player.vy*dt; if(player.x+player.w<0) player.x=W-player.w; if(player.x>W) player.x=0;
 
+    // --- FIX: robust upward-only camera follow ---
+    const anchor = player.y - H*0.45; // keep player around mid-top of the screen
+    if (anchor < cameraY) cameraY = anchor; // only scroll upward (more negative)
+
     let landed=false; if(player.vy>=0){ for(const p of platforms){ const wasAbove=(player.y+player.h)<=p.y+10; if(!wasAbove) continue; if(aabb(player,p)){ player.y=p.y-player.h; player.vy=0; landed=true; if(!player.onGround){ player.jumpsLeft=2; burst(player.x+player.w/2, player.y+player.h, 6, 160);} player.onGround=true; break; } } } if(!landed && player.vy!==0) player.onGround=false;
 
     for(const c of coins){ if(!c.active) continue; if(aabb(player,c)){ c.active=false; incStat('coins',1); try{ sfx.coin.currentTime=0; sfx.coin.play().catch(()=>{});}catch{} burst(c.x+c.w/2, c.y+c.h/2, 8, 180); } }
 
-    const height=Math.round((playerStartY - Math.min(bestY,player.y))); bestY=Math.min(bestY,player.y); levelProgress=Math.max(levelProgress,height); let h=Number(localStorage.getItem(K.HISCORE)||0); if(height>h){ h=height; localStorage.setItem(K.HISCORE, String(h)); } hiscoreEl && (hiscoreEl.textContent=String(h));
+    bestY=Math.min(bestY, player.y); const height=Math.round((playerStartY - bestY)); levelProgress=Math.max(levelProgress, height); let h=Number(localStorage.getItem(K.HISCORE)||0); if(height>h){ h=height; localStorage.setItem(K.HISCORE, String(h)); } hiscoreEl && (hiscoreEl.textContent=String(h));
 
     if(GOAL && !GOAL.reached && aabb(player,GOAL)){ GOAL.reached=true; try{ sfx.win.currentTime=0; sfx.win.play().catch(()=>{});}catch{} const cx=GOAL.x+GOAL.w/2, cy=GOAL.y+10; burst(cx,cy,26,340); celebrateT=2.0; state='celebrating'; return; }
 
@@ -139,7 +145,7 @@
 
     const cut=cameraY+H+150; while(platforms.length && platforms[0].y>cut) platforms.shift(); while(coins.length && coins[0].y>cut) coins.shift(); ensureSpawn(); ensureEnemies(); updateEnemies(dt); updateHUD();
 
-    if(FX.trail){ let col='#ffffffaa'; emit(col, player.x+player.w/2, player.y+player.h, (Math.random()*40-20), 60, .4, 2); }
+    if(FX.trail){ emit('#ffffffaa', player.x+player.w/2, player.y+player.h, (Math.random()*40-20), 60, .4, 2); }
   }
 
   function updateEnemies(dt){
@@ -159,23 +165,7 @@
     }
   }
 
-  // Drawing helpers for accessories
-  function drawAura(){ if(!FX.aura) return; const cx=player.x+player.w/2, cy=player.y+player.h/2 - cameraY; let color='rgba(124,209,249,0.35)';
-    if(FX.aura==='aura-gold') color='rgba(255,209,102,0.45)'; else if(FX.aura==='aura-snow') color='rgba(191,230,255,0.45)'; else if(FX.aura==='aura-space') color='rgba(167,139,250,0.40)'; else if(FX.aura==='aura-team') color='rgba(46,204,113,0.40)';
-    const r=80+Math.sin(performance.now()/200)*6; const g=ctx.createRadialGradient(cx,cy,10,cx,cy,r); g.addColorStop(0,color); g.addColorStop(1,'rgba(0,0,0,0)'); ctx.save(); ctx.fillStyle=g; ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.fill(); ctx.restore(); }
-
-  function drawHead(){ if(!FX.head) return; const x=player.x, y=player.y-cameraY; ctx.save();
-    if(FX.head==='hat-crown'){ ctx.fillStyle='#ffd166'; ctx.beginPath(); ctx.moveTo(x+6,y-6); ctx.lineTo(x+14,y-14); ctx.lineTo(x+22,y-6); ctx.lineTo(x+30,y-14); ctx.lineTo(x+38,y-6); ctx.closePath(); ctx.fill(); }
-    else if(FX.head==='head-helmet'){ ctx.fillStyle='#2ecc71'; ctx.fillRect(x+4,y-10,28,10); ctx.fillStyle='#111'; ctx.fillRect(x+6,y-6,24,3); }
-    else if(FX.head==='hat-santa'){ ctx.fillStyle='#ff4d4d'; ctx.fillRect(x+4,y-10,28,8); ctx.fillStyle='#fff'; ctx.fillRect(x+4,y-2,28,2); }
-    else if(FX.head==='hat-pumpkin'){ ctx.fillStyle='#ff8c00'; ctx.fillRect(x+6,y-10,24,10); }
-    else if(FX.head==='hat-wizard'){ ctx.fillStyle='#6b5b95'; ctx.beginPath(); ctx.moveTo(x+22,y-18); ctx.lineTo(x+8,y-2); ctx.lineTo(x+36,y-2); ctx.closePath(); ctx.fill(); }
-    else if(FX.head==='hat-cap-blue'){ ctx.fillStyle='#1d4ed8'; ctx.fillRect(x+4,y-8,28,8); }
-    ctx.restore(); }
-
-  function drawEyes(){ if(!FX.eyes) return; const ex=player.x+8, ey=player.y-cameraY+12; ctx.save(); ctx.fillStyle='#111'; ctx.fillRect(ex,ey,6,6); ctx.fillRect(ex+18,ey,6,6); ctx.restore(); }
-
-  // Draw
+  // Draw helpers
   function themePlatformColor(){ return FX.themeFlash ? ((Math.floor(performance.now()/350)%2)? '#ffffff' : THEME.platform) : THEME.platform; }
   function colorForSkin(){ return SKIN.flash ? ((Math.floor(performance.now()/250)%2)? SKIN.flashAlt : SKIN.color) : SKIN.color; }
   function drawFlag(ctx,gx,gy,w,h){ ctx.save(); ctx.translate(gx, gy - cameraY); ctx.fillStyle='#9aa7b2'; ctx.fillRect(14,0,6,h); const bw=28,bh=22; ctx.fillStyle='#fff'; ctx.fillRect(0,6,bw,bh); ctx.fillStyle='#111'; for(let yy=0;yy<bh;yy+=6){ for(let xx=0;xx<bw;xx+=6){ if(((xx+yy)/6)%2===0) ctx.fillRect(xx,6+yy,6,6);} } ctx.fillStyle='rgba(0,0,0,.35)'; ctx.beginPath(); ctx.ellipse(17,h+6,24,6,0,0,Math.PI*2); ctx.fill(); ctx.restore(); }
@@ -185,27 +175,29 @@
     ctx.fillStyle=bg1; ctx.fillRect(0,0,W,H); ctx.fillStyle=bg2; ctx.fillRect(0,0,W,H*0.6);
     if(FX.pitch){ ctx.save(); ctx.globalAlpha=0.08; ctx.fillStyle='#ffffff'; for(let i=0;i<6;i++){ const y=i*(H/6); ctx.fillRect(0,y,W,6); } ctx.restore(); }
 
-    // simple parallax blocks
+    // parallax shapes
     ctx.fillStyle='#0b192c'; for(let i=0;i<10;i++){ const w2=160,h2=60; const xx=((i*180)-(performance.now()*0.02)%(W+200))-100; const yy=220+Math.sin(i)*10 - cameraY*0.05; ctx.fillRect(xx,yy,w2,h2);} 
 
     // platforms
     ctx.fillStyle=themePlatformColor(); for(const p of platforms){ ctx.fillRect(p.x, p.y-cameraY, p.w, 24);} 
 
-    // enemies (draw behind player)
+    // enemies behind player
     for(const e of enemies){ if(!e) continue; if(e.type==='bat'){ if(imgBat.complete && imgBat.naturalWidth){ ctx.drawImage(imgBat, e.x-18, e.y-cameraY-12, 36,24); } else { ctx.fillStyle='#a78bfa'; ctx.fillRect(e.x-18, e.y-cameraY-12, 36,24); } } else { if(imgSlime.complete && imgSlime.naturalWidth){ ctx.drawImage(imgSlime, e.x, e.y-cameraY, 28,20); } else { ctx.fillStyle='#64b5f6'; ctx.fillRect(e.x, e.y-cameraY, 28,20); } } }
 
-    // snow/aura/coins
-    if(FX.aura) drawAura();
+    // coins and aura
     for(const c of coins){ if(!c.active) continue; const cx=c.x+c.w/2, cy=c.y+c.h/2 - cameraY, r=c.w/2; ctx.fillStyle='#ffd166'; ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.fill(); }
+
+    if(FX.aura){ const cx=player.x+player.w/2, cy=player.y+player.h/2 - cameraY; let color='rgba(124,209,249,0.35)'; if(FX.aura==='aura-gold') color='rgba(255,209,102,0.45)'; else if(FX.aura==='aura-snow') color='rgba(191,230,255,0.45)'; else if(FX.aura==='aura-space') color='rgba(167,139,250,0.40)'; else if(FX.aura==='aura-team') color='rgba(46,204,113,0.40)'; const r=80+Math.sin(performance.now()/200)*6; const g=ctx.createRadialGradient(cx,cy,10,cx,cy,r); g.addColorStop(0,color); g.addColorStop(1,'rgba(0,0,0,0)'); ctx.save(); ctx.fillStyle=g; ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.fill(); ctx.restore(); }
 
     // player
     ctx.fillStyle=colorForSkin(); ctx.fillRect(player.x, player.y-cameraY, player.w, player.h);
-    drawHead(); drawEyes();
 
-    // flag
+    // simple accessories
+    if(FX.head){ const x=player.x, y=player.y-cameraY; ctx.save(); if(FX.head==='hat-crown'){ ctx.fillStyle='#ffd166'; ctx.beginPath(); ctx.moveTo(x+6,y-6); ctx.lineTo(x+14,y-14); ctx.lineTo(x+22,y-6); ctx.lineTo(x+30,y-14); ctx.lineTo(x+38,y-6); ctx.closePath(); ctx.fill(); } else if(FX.head==='head-helmet'){ ctx.fillStyle='#2ecc71'; ctx.fillRect(x+4,y-10,28,10); ctx.fillStyle='#111'; ctx.fillRect(x+6,y-6,24,3); } else if(FX.head==='hat-santa'){ ctx.fillStyle='#ff4d4d'; ctx.fillRect(x+4,y-10,28,8); ctx.fillStyle='#fff'; ctx.fillRect(x+4,y-2,28,2); } else if(FX.head==='hat-pumpkin'){ ctx.fillStyle='#ff8c00'; ctx.fillRect(x+6,y-10,24,10); } else if(FX.head==='hat-wizard'){ ctx.fillStyle='#6b5b95'; ctx.beginPath(); ctx.moveTo(x+22,y-18); ctx.lineTo(x+8,y-2); ctx.lineTo(x+36,y-2); ctx.closePath(); ctx.fill(); } else if(FX.head==='hat-cap-blue'){ ctx.fillStyle='#1d4ed8'; ctx.fillRect(x+4,y-8,28,8); } ctx.restore(); }
+    if(FX.eyes){ const ex=player.x+8, ey=player.y-cameraY+12; ctx.save(); ctx.fillStyle='#111'; ctx.fillRect(ex,ey,6,6); ctx.fillRect(ex+18,ey,6,6); ctx.restore(); }
+
     if(GOAL){ drawFlag(ctx, GOAL.x, GOAL.y, GOAL.w, GOAL.h); }
 
-    // particles
     for(const p of parts){ const a=Math.max(0,Math.min(1,p.life*2)); ctx.globalAlpha=a; ctx.fillStyle=p.c; const s=p.size||3; ctx.fillRect(p.x-s/2, p.y-s/2 - cameraY, s, s);} ctx.globalAlpha=1;
   }
 
