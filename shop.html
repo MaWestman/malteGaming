@@ -1,1 +1,6 @@
-<!doctype html><title>Shop</title><link rel="stylesheet" href="shop.css"><main class="shop"><h1>Shop</h1></main>
+<!doctype html><meta charset='utf-8'>
+<title>Shop</title><link rel='stylesheet' href='shop.css'>
+<header class='shop-header'><nav class='bar'><a class='btn' href='./'>Home</a><h1>Shop</h1><div class='wallet'>Points: <span id='wallet'>0</span></div></nav></header>
+<main class='shop'><div class='tabs'><button class='tab active' data-tab='themes'>Themes</button><button class='tab' data-tab='backgrounds'>Backgrounds</button><button class='tab' data-tab='skins'>Skins</button><button class='tab' data-tab='accessories'>Accessories</button><button class='tab' data-tab='stats'>Statistics</button></div><section id='grid' class='grid'></section></main>
+<template id='item-card'><article class='card'><div class='preview'></div><div class='meta'><div class='name'></div><div class='rarity'></div></div><div class='actions'><button class='btn buy'></button></div></article></template>
+<script src='shop.js'></script>
