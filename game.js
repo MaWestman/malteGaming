@@ -45,12 +45,13 @@
     };
     const t=themeMap[EQ.theme]||themeMap['theme-default']; THEME.platform=t.platform; THEME.bg1=t.bg1; THEME.bg2=t.bg2; FX.themeFlash=!!t.flash;
 
-    // BACKGROUNDS flags
-    const animated={'bg-stars':true,'bg-rainbow':true,'bg-nebula':true,'bg-cosmos':true,'bg-snow':true};
-    FX.bgAnimated=!!animated[EQ.background];
-    FX.snow = (EQ.background==='bg-snow' || EQ.theme==='theme-winter');
-    FX.stars = (EQ.background in {'bg-stars':1,'bg-nebula':1,'bg-cosmos':1} or False) or (EQ.theme==='theme-space');
-    FX.pitch = (EQ.background==='bg-pitch' or EQ.theme==='theme-football');
+    // BACKGROUNDS flags (JS syntax fix)
+    const animatedBg = new Set(['bg-stars','bg-rainbow','bg-nebula','bg-cosmos','bg-snow']);
+    const starBgs   = new Set(['bg-stars','bg-nebula','bg-cosmos']);
+    FX.bgAnimated = animatedBg.has(EQ.background);
+    FX.snow      = (EQ.background==='bg-snow') || (EQ.theme==='theme-winter');
+    FX.stars     = starBgs.has(EQ.background) || (EQ.theme==='theme-space');
+    FX.pitch     = (EQ.background==='bg-pitch') || (EQ.theme==='theme-football');
 
     // SKINS
     const skinMap={
@@ -72,7 +73,7 @@
   applyEquipped();
 
   // World state
-  let state='waiting', pendingNext=false, retryPending=false, dead=false, shownOverlayAfterWin=false;
+  let state='waiting', pendingNext=false, retryPending=false, dead=false;
   let last=performance.now(), cameraY=0, spawnY=H, bestY=0, playerStartY=300, runPoints=0;
   let activeLevel=1, levelProgress=0, dynamicLevelHeight=1000;
   const player={ x:W*0.5-18, y:280, w:36, h:47, vx:0, vy:0, onGround:false, jumpsLeft:2 };
@@ -107,9 +108,7 @@
   function placePlayerOnPlatform(){ if(!platforms.length) return; let p=platforms[0]; for(const pl of platforms){ if(pl.y>p.y) p=pl; } const right=p.x+p.w-player.w; player.x=Math.max(p.x,Math.min(right,p.x+(p.w-player.w)/2)); player.y=p.y-player.h; player.vx=0; player.vy=0; player.onGround=true; player.jumpsLeft=2; }
   function ensureSpawn(){ const target=cameraY-200; const ceiling=Math.min(target, goalY-120); while(spawnY>ceiling){ const w=90+Math.floor(Math.random()*90), x=30+Math.floor(Math.random()*(W-60-w)), y=spawnY-(70+Math.floor(Math.random()*60)); platforms.push({x,y,w,h:20}); if(Math.random()<0.55) coins.push({x:x+w*0.5-COIN/2,y:y-32,w:COIN,h:COIN,active:true}); spawnY=y; } }
 
-  function resetWorld(){ cameraY=0; spawnY=H; parts.length=0; platforms.length=coins.length=0; GOAL=null; FINAL_PLAT=null; dead=false; celebrateT=0; pendingNext=false; shownOverlayAfterWin=false; applyEquipped();
-    Object.assign(player,{x:W*0.5-18,y:300,vx:0,vy:0,onGround:false,jumpsLeft:2});
-    let y=360; for(let i=0;i<6;i++){ const w=90+Math.floor(Math.random()*90), x=30+Math.floor(Math.random()*(W-60-w)); platforms.push({x,y,w,h:20}); if(Math.random()<0.6) coins.push({x:x+w*0.5-COIN/2,y:y-32,w:COIN,h:COIN,active:true}); y-=(70+Math.floor(Math.random()*60)); } spawnY=y; placePlayerOnPlatform(); playerStartY=player.y; bestY=player.y; levelProgress=0; setGoalForLevel(); updateHUD(); }
+  function resetWorld(){ cameraY=0; spawnY=H; parts.length=0; platforms.length=coins.length=0; GOAL=null; FINAL_PLAT=null; dead=false; celebrateT=0; pendingNext=false; Object.assign(player,{x:W*0.5-18,y:300,vx:0,vy:0,onGround:false,jumpsLeft:2}); applyEquipped(); let y=360; for(let i=0;i<6;i++){ const w=90+Math.floor(Math.random()*90), x=30+Math.floor(Math.random()*(W-60-w)); platforms.push({x,y,w,h:20}); if(Math.random()<0.6) coins.push({x:x+w*0.5-COIN/2,y:y-32,w:COIN,h:COIN,active:true}); y-=(70+Math.floor(Math.random()*60)); } spawnY=y; placePlayerOnPlatform(); playerStartY=player.y; bestY=player.y; levelProgress=0; setGoalForLevel(); updateHUD(); }
 
   function setGoalForLevel(){ dynamicLevelHeight=levelLengthFor(activeLevel); goalY=playerStartY-dynamicLevelHeight; const platY=goalY+10; const plat={x:0,y:platY,w:W,h:24}; platforms.push(plat); FINAL_PLAT=plat; const flagW=36,flagH=120,gx=Math.floor(W/2-flagW/2); GOAL={x:gx,y:platY-flagH,w:flagW,h:flagH,reached:false}; }
 
@@ -130,10 +129,7 @@
   function updateHUD(){ scoreEl&&(scoreEl.textContent=String(levelProgress)); levelEl&&(levelEl.textContent=String(activeLevel)); const h=Number(localStorage.getItem(K.HISCORE)||0); hiscoreEl&&(hiscoreEl.textContent=String(h)); }
 
   // FX helpers
-  const snowFlakes=[]; function updateSnow(dt){ if(!FX.snow) return; // add flakes
-    while(snowFlakes.length<70){ snowFlakes.push({x:Math.random()*W, y:cameraY-20-Math.random()*H, v:30+Math.random()*50, r:1+Math.random()*2}); }
-    for(const f of snowFlakes){ f.y += f.v*dt; if(f.y>cameraY+H+10){ f.y=cameraY-10-Math.random()*H; f.x=Math.random()*W; } }
-  }
+  const snowFlakes=[]; function updateSnow(dt){ if(!FX.snow) return; while(snowFlakes.length<70){ snowFlakes.push({x:Math.random()*W, y:cameraY-20-Math.random()*H, v:30+Math.random()*50, r:1+Math.random()*2}); } for(const f of snowFlakes){ f.y += f.v*dt; if(f.y>cameraY+H+10){ f.y=cameraY-10-Math.random()*H; f.x=Math.random()*W; } } }
   const starField=[]; function updateStars(){ if(!FX.stars) return; if(starField.length===0){ for(let i=0;i<80;i++){ starField.push({x:Math.random()*W, y:Math.random()*H}); } } }
 
   function colorForSkin(){ if(!SKIN.flash) return SKIN.color; return (Math.floor(performance.now()/250)%2)? SKIN.flashAlt : SKIN.color; }
@@ -155,7 +151,7 @@
 
     player.vy+=GRAVITY*dt; if(player.vy>MAX_FALL) player.vy=MAX_FALL; player.x+=player.vx*dt; player.y+=player.vy*dt; if(player.x+player.w<0) player.x=W-player.w; if(player.x>W) player.x=0;
 
-    let landed=false; if(player.vy>=0){ for(const p of platforms){ const wasAbove=(player.y+player.h)<=p.y+10; if(!wasAbove) continue; if(aabb(player,p)){ player.y=p.y-player.h; player.vy=0; landed=true; if(!player.onGround){ player.jumpsLeft=2; burst(player.x+player.w/2, player.y+player.h, '#8fb6ff', 6, 160);} player.onGround=true; break; } } } if(!landed && player.vy!==0) player.onGround=false;
+    let landed=false; if(player.vy>=0){ for(const p of platforms){ const wasAbove=(player.y+player.h)<=p.y+10; if(!wasAbove) continue; if(aabb(player,p)){ player.y=p.y-player.h; player.vy=0; landed=true; if(!player.onGround){ player.jumpsLeft=2; burst(player.x+player.w/2, player.y+player.h, 6, 160); } player.onGround=true; break; } } } if(!landed && player.vy!==0) player.onGround=false;
 
     for(const c of coins){ if(!c.active) continue; if(aabb(player,c)){ c.active=false; incStat('coins',1); runPoints+=10; try{ sfx.coin.currentTime=0; sfx.coin.play().catch(()=>{});}catch{} burst(c.x+c.w/2, c.y+c.h/2, 8, 180); } }
 
@@ -174,51 +170,37 @@
   function drawFlag(ctx,gx,gy,w,h){ ctx.save(); ctx.translate(gx, gy - cameraY); ctx.fillStyle='#9aa7b2'; ctx.fillRect(14,0,6,h); const bw=28,bh=22; ctx.fillStyle='#fff'; ctx.fillRect(0,6,bw,bh); ctx.fillStyle='#111'; for(let yy=0;yy<bh;yy+=6){ for(let xx=0;xx<bw;xx+=6){ if(((xx+yy)/6)%2===0) ctx.fillRect(xx,6+yy,6,6);} } ctx.fillStyle='rgba(0,0,0,.35)'; ctx.beginPath(); ctx.ellipse(17,h+6,24,6,0,0,Math.PI*2); ctx.fill(); ctx.restore(); }
 
   function draw(){
-    // background
     const t = performance.now()/1000;
     let bg1=THEME.bg1, bg2=THEME.bg2;
     if(FX.bgAnimated){ const pal=[THEME.bg1, THEME.bg2, '#1e3a8a', '#3b82f6', '#9333ea']; const i=Math.floor((t*1.2)%pal.length); bg1=pal[i]; bg2=pal[(i+1)%pal.length]; }
     ctx.fillStyle=bg1; ctx.fillRect(0,0,W,H); ctx.fillStyle=bg2; ctx.fillRect(0,0,W,H*0.6);
 
-    // pitch stripes
     if(FX.pitch){ ctx.save(); ctx.globalAlpha=0.08; ctx.fillStyle='#ffffff'; for(let i=0;i<6;i++){ const y=i*(H/6); ctx.fillRect(0,y,W,6); } ctx.restore(); }
 
-    // parallax blocks
     ctx.fillStyle='#0b192c'; for(let i=0;i<10;i++){ const w2=160,h2=60; const xx=((i*180)-(performance.now()*0.02)%(W+200))-100; const yy=220+Math.sin(i)*10 - cameraY*0.05; ctx.fillRect(xx,yy,w2,h2);} 
 
-    // stars overlay
     if(FX.stars){ ctx.save(); ctx.fillStyle='rgba(255,255,255,0.85)'; for(const s of starField){ const y=s.y - (cameraY*0.1 % H); ctx.fillRect(s.x, y, 1, 1); } ctx.restore(); }
 
-    // platforms
     ctx.fillStyle=themePlatformColor(); for(const p of platforms){ ctx.fillRect(p.x, p.y-cameraY, p.w, 24);} 
 
-    // snow overlay
     if(FX.snow){ ctx.save(); ctx.fillStyle='rgba(255,255,255,0.85)'; for(const f of snowFlakes){ ctx.beginPath(); ctx.arc(f.x, f.y - cameraY, f.r, 0, Math.PI*2); ctx.fill(); } ctx.restore(); }
 
-    // coins
     for(const c of coins){ if(!c.active) continue; const cx=c.x+c.w/2, cy=c.y+c.h/2 - cameraY, r=c.w/2; ctx.fillStyle='#ffd166'; ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.fill(); }
 
-    // aura
     if(FX.aura){ ctx.save(); let auraColor='rgba(124,209,249,0.35)'; if(FX.aura==='aura-gold') auraColor='rgba(255,209,102,0.45)'; if(FX.aura==='aura-snow') auraColor='rgba(191,230,255,0.45)'; if(FX.aura==='aura-space') auraColor='rgba(167,139,250,0.40)'; if(FX.aura==='aura-team') auraColor='rgba(46,204,113,0.40)'; const cxp=player.x+player.w/2, cyp=player.y+player.h/2 - cameraY; const r=80+Math.sin(performance.now()/200)*6; const g=ctx.createRadialGradient(cxp,cyp,10,cxp,cyp,r); g.addColorStop(0,auraColor); g.addColorStop(1,'rgba(0,0,0,0)'); ctx.fillStyle=g; ctx.beginPath(); ctx.arc(cxp,cyp,r,0,Math.PI*2); ctx.fill(); ctx.restore(); }
 
-    // player
     ctx.fillStyle=colorForSkin(); ctx.fillRect(player.x, player.y-cameraY, player.w, player.h);
 
-    // headwear
-    if(FX.head){ ctx.save(); ctx.translate(0,0); if(FX.head==='hat-crown'){ ctx.fillStyle='#ffd166'; ctx.beginPath(); const x=player.x+6, y=player.y-cameraY-6; ctx.moveTo(x,y); ctx.lineTo(x+8,y-8); ctx.lineTo(x+16,y); ctx.lineTo(x+24,y-8); ctx.lineTo(x+32,y); ctx.closePath(); ctx.fill(); } else if(FX.head==='head-helmet'){ ctx.fillStyle='#2ecc71'; ctx.fillRect(player.x+4, player.y-cameraY-10, 28, 10); ctx.fillStyle='#111'; ctx.fillRect(player.x+6, player.y-cameraY-6, 24, 3); } else if(FX.head==='hat-santa'){ ctx.fillStyle='#ff4d4d'; ctx.fillRect(player.x+4, player.y-cameraY-10, 28, 8); ctx.fillStyle='#fff'; ctx.fillRect(player.x+4, player.y-cameraY-2, 28, 2); } else if(FX.head==='hat-pumpkin'){ ctx.fillStyle='#ff8c00'; ctx.fillRect(player.x+6, player.y-cameraY-10, 24, 10); } else { ctx.fillStyle='#ffd166'; ctx.fillRect(player.x+6, player.y-cameraY-6, 24, 6); } ctx.restore(); }
+    if(FX.head){ ctx.save(); if(FX.head==='hat-crown'){ ctx.fillStyle='#ffd166'; ctx.beginPath(); const x=player.x+6, y=player.y-cameraY-6; ctx.moveTo(x,y); ctx.lineTo(x+8,y-8); ctx.lineTo(x+16,y); ctx.lineTo(x+24,y-8); ctx.lineTo(x+32,y); ctx.closePath(); ctx.fill(); } else if(FX.head==='head-helmet'){ ctx.fillStyle='#2ecc71'; ctx.fillRect(player.x+4, player.y-cameraY-10, 28, 10); ctx.fillStyle='#111'; ctx.fillRect(player.x+6, player.y-cameraY-6, 24, 3); } else if(FX.head==='hat-santa'){ ctx.fillStyle='#ff4d4d'; ctx.fillRect(player.x+4, player.y-cameraY-10, 28, 8); ctx.fillStyle='#fff'; ctx.fillRect(player.x+4, player.y-cameraY-2, 28, 2); } else if(FX.head==='hat-pumpkin'){ ctx.fillStyle='#ff8c00'; ctx.fillRect(player.x+6, player.y-cameraY-10, 24, 10); } else { ctx.fillStyle='#ffd166'; ctx.fillRect(player.x+6, player.y-cameraY-6, 24, 6); } ctx.restore(); }
 
-    // eyes
     if(FX.eyes){ ctx.fillStyle='#111'; const ex=player.x+8, ey=player.y-cameraY+12; ctx.fillRect(ex,ey,6,6); ctx.fillRect(ex+18,ey,6,6); }
 
-    // flag
     if(GOAL){ drawFlag(ctx, GOAL.x, GOAL.y, GOAL.w, GOAL.h); }
 
-    // particles
     for(const p of parts){ const a=Math.max(0,Math.min(1,p.life*2)); ctx.globalAlpha=a; ctx.fillStyle=p.c; const s=p.size||3; ctx.fillRect(p.x-s/2, p.y-s/2 - cameraY, s, s);} ctx.globalAlpha=1;
   }
 
   function celebrate(){ try{ sfx.win.currentTime=0; sfx.win.play().catch(()=>{});}catch{} const cx=GOAL.x+GOAL.w/2, cy=GOAL.y+10; burst(cx,cy,26,340); celebrateT=2.0; state='celebrating'; }
 
-  // Boot
   function boot(){ startLevel(1); showOverlay('Start Level 1'); function loop(now){ requestAnimationFrame(loop); const dt=Math.min((now-(window.__t||now))/1000,0.033); window.__t=now; if(state==='playing'||state==='celebrating') update(dt); draw(); } requestAnimationFrame(loop);} boot();
 })();
