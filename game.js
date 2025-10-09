@@ -1,27 +1,48 @@
 
-(()=>{
+// v5.3.3d game.js — Action button centered INSIDE the game screen
+// - The Start/Retry/Continue button (#levelActionDock) is rendered as a centered overlay over the canvas
+// - Top menu remains outside at the top of the page (from v5.3.3c)
+// - Retry fix + flag-on-platform kept
+(() => {
   'use strict';
   const W=800,H=450,MAX_LEVEL=100; const K={HISCORE:'hiscore',WALLET:'wallet',STATS:'stats',MAXLVL:'maxLevelReached'};
-  const canvas=document.getElementById('game'); const ctx=canvas.getContext('2d');
-  function scale(){ const d=Math.max(1,Math.floor(devicePixelRatio||1)); canvas.width=W*d; canvas.height=H*d; ctx.setTransform(d,0,0,d,0,0); } scale(); addEventListener('resize',scale,{passive:true});
 
-  // Top menu controls (outside canvas)
+  // Canvas
+  const canvas=document.getElementById('game'); const ctx=canvas.getContext('2d');
+  function scale(){ const d=Math.max(1,Math.floor(devicePixelRatio||1)); canvas.width=W*d; canvas.height=H*d; ctx.setTransform(d,0,0,d,0,0);} scale(); addEventListener('resize',scale,{passive:true});
+
+  // Top menu controls
   const btnPause=document.getElementById('btnPause');
   const btnRestart=document.getElementById('btnRestart');
   const btnJump=document.getElementById('btnJump');
   const btnLeft=document.getElementById('btnLeft');
   const btnRight=document.getElementById('btnRight');
 
+  // HUD / legacy overlay refs
   const scoreEl=document.getElementById('score'); const hiscoreEl=document.getElementById('hiscore'); const levelEl=document.getElementById('level');
   const levelOverlay=document.getElementById('levelOverlay'); const levelAction=document.getElementById('levelAction');
 
-  // Create DOCK under the stage for Start/Retry/Continue
-  const stage=document.querySelector('.stage'); const dock=document.createElement('div'); dock.id='levelDock'; dock.innerHTML='<button id="levelActionDock" class="level-btn">Start Level 1</button>'; stage && stage.insertAdjacentElement('afterend', dock);
-  const style=document.createElement('style'); style.textContent=`#levelDock{display:none;margin:10px 0 0;text-align:center}#levelDock .level-btn{font-size:clamp(18px,4vw,26px);padding:14px 22px;border-radius:14px;background:linear-gradient(90deg,#7cd1f9,#ffd166);color:#041428;font-weight:900;border:none;box-shadow:0 12px 30px rgba(0,0,0,.35);cursor:pointer}`; document.head.appendChild(style);
-  const levelActionDock=document.getElementById('levelActionDock');
+  // === Create centered DOCK overlay inside the game stage ===
+  const stage=document.querySelector('.stage');
+  const dock=document.createElement('div');
+  dock.id='levelDock';
+  dock.className='dock-overlay hidden';
+  dock.innerHTML = '<button id="levelActionDock" class="level-btn">Start Level 1</button>';
+  stage && stage.appendChild(dock);
+
+  // Inject minimal CSS so the dock is centered over the canvas
+  const style=document.createElement('style');
+  style.textContent = `
+    .dock-overlay{ position:absolute; inset:0; display:grid; place-items:center; z-index:30; pointer-events:auto; }
+    .dock-overlay.hidden{ display:none !important; }
+  `;
+  document.head.appendChild(style);
+
+  const levelActionDock = dock.querySelector('#levelActionDock');
 
   // Audio
-  const sfx={ jump:new Audio('assets/audio/jump.wav'), coin:new Audio('assets/audio/coin.wav'), hit:new Audio('assets/audio/hit.wav'), win:new Audio('assets/audio/win.wav') }; Object.values(sfx).forEach(a=>{a.preload='auto'; a.volume=.28;});
+  const sfx={ jump:new Audio('assets/audio/jump.wav'), coin:new Audio('assets/audio/coin.wav'), hit:new Audio('assets/audio/hit.wav'), win:new Audio('assets/audio/win.wav') };
+  Object.values(sfx).forEach(a=>{ a.preload='auto'; a.volume=.28; });
 
   // World
   const THEME={ platform:'#5e81ac', bg1:'#0f1a2b', bg2:'#162238', para:'#0b192c' };
@@ -40,9 +61,17 @@
   function emit(c,x,y,vx,vy,life=.6,size=3){ parts.push({c,x,y,vx,vy,life,size}); }
   function burst(x,y,cnt=18,spd=260){ const pal=['#7de07d','#ffd166','#7cd1f9','#f97098','#c084fc']; for(let i=0;i<cnt;i++){ const A=Math.random()*Math.PI*2,S=spd*(0.35+Math.random()*0.9); emit(pal[i%pal.length],x,y,Math.cos(A)*S,Math.sin(A)*S,0.5+Math.random()*0.6,3+Math.random()*2);} }
 
-  // Overlay/Dock control
-  function showOverlay(text){ levelAction && (levelAction.textContent=text); levelOverlay && (levelOverlay.classList.add('hidden'), levelOverlay.style.display='none'); levelActionDock && (levelActionDock.textContent=text); dock && (dock.style.display='block'); }
-  function hideOverlay(){ levelOverlay && (levelOverlay.classList.add('hidden'), levelOverlay.style.display='none'); dock && (dock.style.display='none'); }
+  // Overlay/Dock control — center in screen
+  function showOverlay(text){
+    // Always use centered dock overlay; keep any legacy overlay hidden
+    levelOverlay && (levelOverlay.classList.add('hidden'), levelOverlay.style.display='none');
+    if(levelActionDock) levelActionDock.textContent=text;
+    dock && dock.classList.remove('hidden');
+  }
+  function hideOverlay(){
+    levelOverlay && (levelOverlay.classList.add('hidden'), levelOverlay.style.display='none');
+    dock && dock.classList.add('hidden');
+  }
 
   // Input
   function queueJump(){ jumpQueued=true; try{ sfx.jump.currentTime=0; sfx.jump.play().catch(()=>{});}catch{} }
@@ -74,7 +103,7 @@
     levelActionDock && levelActionDock.addEventListener(ev,(e)=>{ e.preventDefault(); e.stopPropagation(); handleActionClick(); });
   });
 
-  // Pause/Restart (menu always visible on top)
+  // Pause/Restart
   btnPause && (btnPause.onclick=()=>{ if(state==='playing'){ state='paused'; } else if(state==='paused'){ state='playing'; hideOverlay(); } });
   btnRestart && (btnRestart.onclick=()=>{ startLevel(activeLevel); });
 
