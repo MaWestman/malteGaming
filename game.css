@@ -2,21 +2,16 @@
 :root { --bg:#0e1726; --panel:#1b2a41; --panel2:#223a5e; --accent:#7cd1f9; --fg:#e6edf3; }
 * { box-sizing: border-box; }
 html, body { height:100%; margin:0; background:var(--bg); color:var(--fg); font-family:system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
-
-/* Top nav outside the game window */
 .top-nav { position: sticky; top: 0; z-index: 50; background: rgba(11,25,44,.95); border-bottom:1px solid #223a5e; backdrop-filter: blur(6px); }
 .top-nav__inner { max-width: 1200px; margin:0 auto; display:flex; align-items:center; gap:8px; padding:8px 12px; }
 .top-nav .btn, .top-nav label.mute { background:#223a5e; color:var(--fg); padding:8px 12px; border:none; border-radius:8px; cursor:pointer; font-weight:600; text-decoration:none; }
 .top-nav .btn.ghost { background:transparent; border:2px solid #2a4570; }
 .top-nav .spacer { flex:1 1 auto; }
-
 main { display:grid; place-items:center; min-height:calc(100vh - 60px); gap:12px; padding:12px; }
 .stage { position: relative; display: inline-block; line-height: 0; }
 canvas { background:#0f1a2b; width: min(96vw, 960px); height: auto; border:2px solid #223a5e; border-radius:10px; box-shadow:0 10px 30px rgba(0,0,0,.35); }
-
 .hud { position:absolute; inset: 8px 8px auto 8px; display:flex; gap:8px; align-items:center; flex-wrap:wrap; justify-content:center; padding:8px; background:rgba(15,26,43,.78); border:1px solid #223a5e; border-radius:12px; backdrop-filter: blur(6px); z-index: 5; pointer-events: none; }
 .hud * { pointer-events: auto; }
-
 button, .btn, label.mute { background:#223a5e; color:var(--fg); padding:8px 12px; border:none; border-radius:8px; cursor:pointer; font-weight:600; text-decoration:none; }
 .btn.ghost{ background:transparent; border:2px solid #2a4570; }
 .score { padding:6px 10px; background:#172335; border-radius:8px; font-weight:700; }
