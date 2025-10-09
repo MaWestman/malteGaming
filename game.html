@@ -8,31 +8,37 @@
   <link rel="stylesheet" href="game.css" />
 </head>
 <body>
+  <!-- TOP NAV placed outside the game window -->
+  <header id="topMenu" class="top-nav" role="navigation" aria-label="Game menu">
+    <div class="top-nav__inner">
+      <a class="btn ghost" href="./">⟵ Home</a>
+      <a class="btn ghost" href="shop.html">Shop</a>
+      <a class="btn ghost" href="stats.html">Stats</a>
+      <div class="spacer"></div>
+      <button id="btnPause" class="btn" aria-label="Pause or resume">Pause</button>
+      <label class="mute"><input type="checkbox" id="mute" /> Mute</label>
+      <button id="btnRestart" class="btn" aria-label="Restart level">Restart</button>
+    </div>
+  </header>
+
   <main>
     <h1 class="sr-only">Upward Jump Game</h1>
     <div class="stage">
       <canvas id="game" width="800" height="450" aria-label="Jumping game canvas" role="img"></canvas>
 
-      <div class="hud" role="toolbar" aria-label="Game controls">
+      <div class="hud" role="toolbar" aria-label="Game HUD">
         <div class="score" aria-live="polite">Level: <span id="level">1</span> · Height: <span id="score">0</span> · Best: <span id="hiscore">0</span></div>
       </div>
 
-      <div class="mobile-bar" role="navigation" aria-label="Mobile game menu">
-        <a class="btn ghost" href="./">⟵ Home</a>
-        <a class="btn ghost" href="shop.html">Shop</a>
-        <a class="btn ghost" href="stats.html">Stats</a>
-        <button id="btnPause" class="btn" aria-label="Pause or resume">Pause</button>
-        <label class="mute"><input type="checkbox" id="mute" /> Mute</label>
-        <button id="btnRestart" class="btn" aria-label="Restart level">Restart</button>
-      </div>
-
+      <!-- Touch controls inside stage -->
       <div class="touchpad">
         <button id="btnLeft"  class="round" aria-label="Left">◀</button>
         <button id="btnJump"  class="round main" aria-label="Jump" title="Jump">⤒</button>
         <button id="btnRight" class="round" aria-label="Right">▶</button>
       </div>
 
-      <div id="levelOverlay" class="level-overlay" aria-live="polite">
+      <!-- Legacy overlay kept for compatibility; dock is created by game.js outside canvas -->
+      <div id="levelOverlay" class="level-overlay hidden" aria-live="polite">
         <button id="levelAction" class="level-btn">Start Level 1</button>
       </div>
     </div>
