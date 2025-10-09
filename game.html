@@ -5,10 +5,10 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Game — WGAF</title>
+  <link rel="icon" href="favicon.ico" />
   <link rel="stylesheet" href="game.css" />
 </head>
 <body>
-  <!-- TOP NAV outside the game window -->
   <header id="topMenu" class="top-nav" role="navigation" aria-label="Game menu">
     <div class="top-nav__inner">
       <a class="btn ghost" href="./">⟵ Home</a>
@@ -30,14 +30,12 @@
         <div class="score" aria-live="polite">Level: <span id="level">1</span> · Height: <span id="score">0</span> · Best: <span id="hiscore">0</span></div>
       </div>
 
-      <!-- Touch controls -->
       <div class="touchpad">
         <button id="btnLeft"  class="round" aria-label="Left">◀</button>
         <button id="btnJump"  class="round main" aria-label="Jump" title="Jump">⤒</button>
         <button id="btnRight" class="round" aria-label="Right">▶</button>
       </div>
 
-      <!-- Legacy overlay hidden; runtime creates centered dock overlay -->
       <div id="levelOverlay" class="level-overlay hidden" aria-live="polite">
         <button id="levelAction" class="level-btn">Start Level 1</button>
       </div>
